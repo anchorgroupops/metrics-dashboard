@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>HermesOS · DORI Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-e6nUZLBkQ86NJ6TVVKAeSaK8jWa3NhkYWZFomE39AvDbQWeie9PlQqM3pmYW5d1g" crossorigin="anonymous" defer></script>
+<style>
+:root{--bg:#060610;--surface:#0d0d1a;--surf2:#121225;--border:#1a1a35;--accent:#6d28d9;--accent2:#7c3aed;--glow:rgba(109,40,217,.18);--teal:#0891b2;--grn:#059669;--amb:#d97706;--red:#dc2626;--txt:#e2e8f0;--mut:#7a8fa8;--mono:'DM Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;height:100vh;overflow:hidden}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#auth{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s}
+#auth.out{opacity:0;pointer-events:none}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:44px 40px;width:100%;max-width:360px;text-align:center;box-shadow:0 0 80px var(--glow)}
+.auth-logo{font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--txt);margin-bottom:4px;letter-spacing:-.5px}
+.auth-logo span{color:var(--accent2)}
+.auth-ver{font-family:var(--mono);font-size:11px;color:var(--mut);margin-bottom:28px;letter-spacing:1px}
+.auth-inp{width:100%;padding:13px 16px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--txt);font-size:15px;text-align:center;letter-spacing:4px;outline:none;transition:border-color .2s;font-family:var(--mono)}
+.auth-inp:focus{border-color:var(--accent2);box-shadow:0 0 0 3px var(--glow)}
+.auth-btn{margin-top:14px;width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;transition:background .2s;letter-spacing:.5px}
+.auth-btn:hover{background:var(--accent2)}
+.auth-err{margin-top:10px;color:var(--red);font-size:12px;font-family:var(--mono);min-height:16px}
+#app{display:none;height:100vh;flex-direction:column}
+#app.on{display:flex}
+nav{background:var(--surface);border-bottom:1px solid var(--border);height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0}
+.nav-brand{font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:var(--txt);letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+.nav-brand span{color:var(--accent2)}
+.nav-r{display:flex;align-items:center;gap:12px}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--grn);box-shadow:0 0 8px var(--grn);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.status-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut);font-family:var(--mono)}
+.safety-badge{font-family:var(--mono);font-size:10px;color:var(--grn);background:rgba(5,150,105,.1);border:1px solid rgba(5,150,105,.25);border-radius:4px;padding:2px 8px;letter-spacing:.5px}
+.shell{display:flex;flex:1;overflow:hidden}
+
+/* ─── SIDEBAR ────────────────────────────────────────────────── */
+.sidebar{width:218px;min-width:218px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+.sb-sec{padding:14px 14px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--mut);font-family:var(--mono)}
+.sb-action{display:flex;align-items:center;gap:9px;padding:12px 14px;cursor:pointer;color:var(--mut);font-size:12px;border-left:2px solid transparent;transition:all .12s;user-select:none;min-height:44px}
+.sb-action:hover,.sb-action:focus-visible{color:var(--txt);background:rgba(255,255,255,.03);border-left-color:var(--accent2);outline:none}
+.sb-action:active{background:var(--glow)}
+.sb-icon{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.sb-divider{height:1px;background:var(--border);margin:8px 14px}
+
+/* ─── GAUGE SECTION ──────────────────────────────────────────── */
+.gauge-wrap{padding:6px 11px 10px}
+.gauge-main-block{display:flex;flex-direction:column;align-items:center;margin-bottom:6px}
+.gauge-canvas{display:block;width:100%;image-rendering:auto}
+.gauge-zone-badge{font-family:'Sora',sans-serif;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;padding:2px 7px;border-radius:3px;margin-top:3px}
+.gauge-zone-badge.red{color:#ef4444;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25)}
+.gauge-zone-badge.amb{color:#f59e0b;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25)}
+.gauge-zone-badge.grn{color:#10b981;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.25)}
+.gauge-zone-badge.blu{color:#38bdf8;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25)}
+.gauge-sub-vals{font-family:var(--mono);font-size:10px;color:var(--mut);text-align:center;margin-top:2px}
+.gauge-mini-row{display:flex;gap:8px;justify-content:space-between;margin-top:6px}
+.gauge-mini-block{flex:1;display:flex;flex-direction:column;align-items:center;background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:6px 4px 5px}
+.gauge-mini-canvas{display:block;width:100%;image-rendering:auto}
+.gauge-mini-val{font-family:'Sora',sans-serif;font-size:13px;font-weight:700;text-align:center;margin-top:2px;line-height:1}
+.gauge-mini-lbl{font-family:var(--mono);font-size:9px;color:var(--mut);text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+/* ─── AGENT LEADERBOARD ──────────────────────────────────────── */
+.agent-board-wrap{padding:0 11px 12px}
+.agent-row{display:flex;align-items:center;gap:5px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.035)}
+.agent-row:last-child{border-bottom:none}
+.agent-rank{font-family:var(--mono);font-size:9px;color:var(--mut);width:16px;flex-shrink:0;text-align:center}
+.agent-name{font-size:11px;color:var(--txt);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.agent-bar-bg{width:42px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;flex-shrink:0}
+.agent-bar-fill{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.25,.46,.45,.94)}
+.agent-pct{font-family:var(--mono);font-size:9px;width:26px;text-align:right;flex-shrink:0;font-weight:500}
+.agent-arrow{font-size:9px;flex-shrink:0;width:11px;text-align:center;font-weight:700}
+
+/* ─── ZONE LEGEND ────────────────────────────────────────────── */
+.zone-legend{display:flex;gap:4px;padding:4px 11px 8px;flex-wrap:wrap}
+.zone-pip{display:flex;align-items:center;gap:3px;font-family:var(--mono);font-size:8.5px;color:var(--mut)}
+.zone-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+
+/* ─── MAIN CHAT AREA ─────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.dori-header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.dori-title{font-family:'Sora',sans-serif;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px}
+.dori-sub{font-family:var(--mono);font-size:10px;color:var(--mut)}
+.readonly-badge{font-family:var(--mono);font-size:10px;color:var(--teal);background:rgba(8,145,178,.1);border:1px solid rgba(8,145,178,.25);border-radius:4px;padding:2px 8px}
+#dori-messages{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.msg{display:flex;flex-direction:column;max-width:82%}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.dori{align-self:flex-start;align-items:flex-start}
+.msg-label{font-family:var(--mono);font-size:10px;color:var(--mut);margin-bottom:4px;letter-spacing:.5px}
+.msg-bubble{padding:11px 14px;border-radius:10px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.msg.user .msg-bubble{background:var(--accent);color:#fff;border-bottom-right-radius:3px}
+.msg.dori .msg-bubble{background:var(--surf2);border:1px solid var(--border);color:var(--txt);border-bottom-left-radius:3px}
+.msg-time{font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:4px}
+.msg-img{max-width:240px;border-radius:8px;margin-bottom:6px;border:1px solid var(--border)}
+.thinking{display:flex;align-items:center;gap:5px;padding:11px 14px;background:var(--surf2);border:1px solid var(--border);border-radius:10px;border-bottom-left-radius:3px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:bounce .9s infinite}
+.dot:nth-child(2){animation-delay:.15s}
+.dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.chart-wrap{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:8px;max-width:500px}
+.chart-title{font-family:'Sora',sans-serif;font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.chart-canvas{max-height:240px}
+.dori-input-row{border-top:1px solid var(--border);padding:10px 14px;display:flex;gap:8px;align-items:center;flex-shrink:0;background:var(--surface)}
+.input-btn{width:44px;height:44px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--mut);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .12s;flex-shrink:0}
+.input-btn:hover,.input-btn:focus-visible{border-color:var(--accent2);color:var(--txt);background:var(--glow);outline:none}
+.input-btn.active{border-color:var(--red);color:var(--red);background:rgba(220,38,38,.1);animation:mic-pulse 1s infinite}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.4)}50%{box-shadow:0 0 0 6px rgba(220,38,38,0)}}
+#dori-input{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--txt);font-size:13px;font-family:-apple-system,'Segoe UI',sans-serif;outline:none;transition:border-color .15s;resize:none;min-height:44px;max-height:120px;overflow-y:auto;line-height:1.5}
+#dori-input:focus{border-color:var(--accent2);box-shadow:0 0 0 2px var(--glow)}
+#dori-input::placeholder{color:var(--mut)}
+.send-btn{padding:12px 18px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;transition:background .15s;white-space:nowrap;flex-shrink:0;min-height:44px}
+.send-btn:hover,.send-btn:focus-visible{background:var(--accent2);outline:none}
+.send-btn:disabled{opacity:.5;cursor:not-allowed}
+.dori-alerts{margin-bottom:6px;display:flex;flex-direction:column;gap:4px;max-width:100%}
+.alert-item{padding:7px 12px;border-radius:7px;font-size:11px;font-family:var(--mono);line-height:1.5;border:1px solid rgba(217,119,6,.3);background:rgba(217,119,6,.07);color:#fbbf24}
+.alert-item.urgent{border-color:rgba(220,38,38,.3);background:rgba(220,38,38,.07);color:#f87171}
+.alert-item.success{border-color:rgba(5,150,105,.3);background:rgba(5,150,105,.07);color:#34d399}
+.suggestion-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{padding:10px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surf2);color:var(--mut);font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .12s;letter-spacing:.2px;line-height:1.4;min-height:44px;display:inline-flex;align-items:center}
+.chip:hover,.chip:focus-visible{border-color:var(--accent2);color:var(--txt);background:rgba(109,40,217,.12);outline:none}
+.file-preview{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;margin-bottom:6px;font-size:11px;font-family:var(--mono);color:var(--mut)}
+.file-preview .fp-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-preview .fp-rm{cursor:pointer;color:var(--red);font-size:14px}
+.hamburger{display:none;background:transparent;border:none;color:var(--mut);cursor:pointer;padding:6px 8px;font-size:18px;line-height:1;min-width:44px;min-height:44px;align-items:center;justify-content:center}
+.hamburger:focus-visible{outline:2px solid var(--accent2);border-radius:6px}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:199;backdrop-filter:blur(2px)}
+.sidebar-overlay.open{display:block}
+@media(max-width:768px){
+  .hamburger{display:flex}
+  .sidebar{position:fixed;left:0;top:52px;bottom:0;z-index:200;transform:translateX(-100%);transition:transform .22s ease;box-shadow:4px 0 24px rgba(0,0,0,.5)}
+  .sidebar.mobile-open{transform:translateX(0)}
+  .msg{max-width:94%}
+}
+</style>
+</head>
+<body>
+
+<div id="auth">
+  <div class="auth-box">
+    <div class="auth-logo">Hermes<span>OS</span></div>
+    <div class="auth-ver">DORI · BUSINESS INTELLIGENCE</div>
+    <label for="pw" class="sr-only">Access code</label>
+    <input type="password" class="auth-inp" id="pw" placeholder="ACCESS CODE" autocomplete="current-password" aria-describedby="err">
+    <button class="auth-btn" onclick="login()">INITIALIZE</button>
+    <div class="auth-err" id="err" role="alert" aria-live="assertive"></div>
+  </div>
+</div>
+
+<div id="app">
+  <nav aria-label="Main navigation">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="hamburger" id="hamburger-btn" onclick="toggleSidebar()" aria-label="Open sidebar navigation" aria-expanded="false" aria-controls="main-sidebar">☰</button>
+      <div class="nav-brand">Hermes<span>OS</span></div>
+    </div>
+    <div class="nav-r">
+      <div class="safety-badge">READ-ONLY · NO OUTBOUND</div>
+      <div class="status-pill"><span class="pulse"></span>DORI ONLINE</div>
+    </div>
+  </nav>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()" aria-hidden="true"></div>
+
+  <div class="shell">
+    <aside class="sidebar" id="main-sidebar" aria-label="Sidebar navigation">
+      <div class="sb-sec">Quick Intel</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Give me a full business snapshot')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Give me a full business snapshot')}"><span class="sb-icon" aria-hidden="true">📊</span>Business Snapshot</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Which deals are stale and need follow-up?')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Which deals are stale and need follow-up?')}"><span class="sb-icon" aria-hidden="true">⚠️</span>Stale Deals</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('What deals are closing soon?')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('What deals are closing soon?')}"><span class="sb-icon" aria-hidden="true">🎯</span>Closing Soon</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Show me the agent leaderboard and performance')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Show me the agent leaderboard and performance')}"><span class="sb-icon" aria-hidden="true">🏆</span>Agent Leaderboard</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Where are leads coming from and what converts best?')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Where are leads coming from and what converts best?')}"><span class="sb-icon" aria-hidden="true">📈</span>Lead Sources</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Which agents are using the dashboards?')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Which agents are using the dashboards?')}"><span class="sb-icon" aria-hidden="true">📱</span>Dashboard Adoption</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="loadEmailIntel()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();loadEmailIntel()}"><span class="sb-icon" aria-hidden="true">📧</span>Email Intel</div>
+
+      <div class="sb-divider"></div>
+      <div class="sb-sec">Predictive</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Give me predictive analytics — revenue forecast, pipeline gaps, and agent trajectories for the next 90 days')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Give me predictive analytics — revenue forecast, pipeline gaps, and agent trajectories for the next 90 days')}"><span class="sb-icon" aria-hidden="true">🔮</span>Revenue Forecast</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Which agents are at risk of missing their annual targets? Give me trajectory projections.')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Which agents are at risk of missing their annual targets? Give me trajectory projections.')}"><span class="sb-icon" aria-hidden="true">⚡</span>Agent Trajectories</div>
+
+      <div class="sb-divider"></div>
+      <div class="sb-sec">Visualize</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Show agent performance as a bar chart')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Show agent performance as a bar chart')}"><span class="sb-icon" aria-hidden="true">📉</span>Agent Chart</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Pie chart of lead sources')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Pie chart of lead sources')}"><span class="sb-icon" aria-hidden="true">🥧</span>Lead Source Chart</div>
+      <div class="sb-action" role="button" tabindex="0" onclick="quickAsk('Show pipeline by stage as a chart')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();quickAsk('Show pipeline by stage as a chart')}"><span class="sb-icon" aria-hidden="true">📊</span>Pipeline Chart</div>
+
+      <!-- ─── PERFORMANCE GAUGES (22a/22b/22e) ─── -->
+      <div class="sb-divider"></div>
+      <div class="sb-sec">Performance</div>
+
+      <div class="gauge-wrap">
+        <!-- Main GCI Gauge -->
+        <div class="gauge-main-block">
+          <canvas id="gauge-gci" class="gauge-canvas" style="height:96px" role="img" aria-label="GCI performance gauge — loading"></canvas>
+          <div id="gauge-gci-badge" class="gauge-zone-badge grn">LOADING</div>
+          <div class="gauge-sub-vals" id="gauge-gci-vals">—</div>
+        </div>
+
+        <!-- Two mini gauges -->
+        <div class="gauge-mini-row">
+          <div class="gauge-mini-block">
+            <canvas id="gauge-pipeline" class="gauge-mini-canvas" style="height:60px" role="img" aria-label="Active pipeline deals gauge — loading"></canvas>
+            <div class="gauge-mini-val" id="gauge-pipeline-val" style="color:var(--mut)">—</div>
+            <div class="gauge-mini-lbl">Pipeline</div>
+          </div>
+          <div class="gauge-mini-block">
+            <canvas id="gauge-closing" class="gauge-mini-canvas" style="height:60px" role="img" aria-label="Deals closing soon gauge — loading"></canvas>
+            <div class="gauge-mini-val" id="gauge-closing-val" style="color:var(--mut)">—</div>
+            <div class="gauge-mini-lbl">Closing</div>
+          </div>
+        </div>
+
+        <!-- Zone legend -->
+        <div class="zone-legend" style="margin-top:8px" aria-label="Performance zone key">
+          <div class="zone-pip"><div class="zone-dot" style="background:#ef4444" aria-hidden="true"></div>0–70%</div>
+          <div class="zone-pip"><div class="zone-dot" style="background:#f59e0b" aria-hidden="true"></div>70–100%</div>
+          <div class="zone-pip"><div class="zone-dot" style="background:#10b981" aria-hidden="true"></div>100–130%</div>
+          <div class="zone-pip"><div class="zone-dot" style="background:#38bdf8" aria-hidden="true"></div>130%+</div>
+        </div>
+      </div>
+
+      <!-- ─── AGENT LEADERBOARD (22c/22d) ─── -->
+      <div class="sb-divider"></div>
+      <div class="sb-sec">Top Agents</div>
+      <div class="agent-board-wrap" id="agent-board">
+        <div style="font-size:11px;color:var(--mut);padding:4px 0">Loading...</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="dori-header">
+        <div>
+          <div class="dori-title">DORI <span style="color:var(--mut);font-weight:400;font-size:13px">— Anchor Group Intelligence</span></div>
+          <div class="dori-sub">Voice · Vision · Charts · Reads FUB live · Never sends to agents or customers</div>
+        </div>
+        <span class="readonly-badge">READ-ONLY</span>
+      </div>
+
+      <div id="dori-messages"></div>
+
+      <input type="file" id="file-input" accept="image/*,.pdf,.doc,.docx" style="display:none" onchange="handleFileSelect(this)">
+
+      <div id="file-preview-bar" style="display:none;padding:6px 14px;border-top:1px solid var(--border);background:var(--surface)">
+        <div class="file-preview">
+          <span class="sb-icon">📎</span>
+          <span class="fp-name" id="fp-name">file.jpg</span>
+          <button class="fp-rm" onclick="clearFile()" aria-label="Remove attached file" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:14px;padding:4px;min-width:28px;min-height:28px">✕</button>
+        </div>
+      </div>
+
+      <div class="dori-input-row">
+        <button class="input-btn" id="mic-btn" onclick="toggleVoice()" title="Voice input">🎤</button>
+        <button class="input-btn" onclick="document.getElementById('file-input').click()" title="Attach image or document">📎</button>
+        <textarea id="dori-input" placeholder="Ask DORI anything — or try voice 🎤 or attach a file 📎" rows="1" aria-label="Message DORI"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendDori()">Send</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+const PH='eab3d0dcc85239f31bdd8cfed413f3f14ed7a9299e7f76e64171ba788e332696';
+const K='hermes_auth';
+const DORI_API='https://n8n.joelycannoli.com/webhook/dori-chat';
+const INTEL_API='https://n8n.joelycannoli.com/webhook/anchor-intelligence';
+const EMAIL_API='https://n8n.joelycannoli.com/webhook/dori-email';
+const VISION_API='https://n8n.joelycannoli.com/webhook/dori-vision';
+
+// ─── AUTH ─────────────────────────────────────────────────────────────
+async function hashPw(s){const e=new TextEncoder().encode(s);const b=await crypto.subtle.digest('SHA-256',e);return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('')}
+async function login(){
+  const v=document.getElementById('pw').value;
+  if(await hashPw(v)===PH){sessionStorage.setItem(K,'1');show();}
+  else{const e=document.getElementById('err');e.textContent='ACCESS DENIED';document.getElementById('pw').value='';document.getElementById('pw').focus();setTimeout(()=>e.textContent='',3000);}
+}
+function show(){
+  document.getElementById('auth').classList.add('out');
+  document.getElementById('app').classList.add('on');
+  setTimeout(()=>{document.getElementById('auth').style.display='none';init();},450);
+}
+document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+if(sessionStorage.getItem(K)){document.getElementById('auth').style.display='none';document.getElementById('app').classList.add('on');init();}
+else{document.getElementById('pw').focus();}
+
+// ─── GAUGE ENGINE (22a/22b/22e) ──────────────────────────────────────
+function gaugeColor(pct){
+  if(pct<0.7)return'#ef4444';
+  if(pct<1.0)return'#f59e0b';
+  if(pct<1.3)return'#10b981';
+  return'#38bdf8';
+}
+function gaugeZone(pct){
+  if(pct<0.7)return{label:'NEEDS ATTENTION',cls:'red'};
+  if(pct<1.0)return{label:'ON TRACK',cls:'amb'};
+  if(pct<1.3)return{label:'EXCEEDING',cls:'grn'};
+  return{label:'ELITE',cls:'blu'};
+}
+
+function drawGauge(canvas,pct,opts){
+  opts=opts||{};
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.parentElement.clientWidth-(opts.miniPad||0)*2||canvas.clientWidth||180;
+  const H=canvas.clientHeight||96;
+  canvas.width=Math.round(W*dpr);
+  canvas.height=Math.round(H*dpr);
+  canvas.style.width=W+'px';
+  canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const cx=W/2;
+  const cy=H*0.87;
+  const r=Math.min(W*0.44,H*0.78);
+  const lw=r*(opts.mini?0.24:0.21);
+
+  // Normalize: 150% = full arc
+  // Arc sweeps CLOCKWISE from π (9 o'clock, left) through 3π/2 (12 o'clock, top) to 2π (3 o'clock, right)
+  // Correct formula: endAngle = π + pctNorm * π (not minus — that went through the bottom)
+  const maxPct=1.5;
+  const pctCap=Math.max(0,Math.min(pct,maxPct));
+  const pctNorm=pctCap/maxPct;
+  const valueAngle=Math.PI+(pctNorm*Math.PI);
+
+  const color=gaugeColor(pct);
+
+  // 1 — Background track (π → 2π clockwise = over the top)
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,Math.PI,2*Math.PI,false);
+  ctx.strokeStyle='#1a1a35';
+  ctx.lineWidth=lw;
+  ctx.lineCap='butt';
+  ctx.stroke();
+
+  // 2 — Zone tinting (subtle color wash per tier)
+  const zoneDefs=[
+    {from:0,to:0.7/maxPct,c:'#ef4444'},
+    {from:0.7/maxPct,to:1.0/maxPct,c:'#f59e0b'},
+    {from:1.0/maxPct,to:1.3/maxPct,c:'#10b981'},
+    {from:1.3/maxPct,to:1.0,c:'#38bdf8'}
+  ];
+  zoneDefs.forEach(z=>{
+    const a0=Math.PI+z.from*Math.PI;
+    const a1=Math.PI+z.to*Math.PI;
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,a0,a1,false);
+    ctx.strokeStyle=z.c+'28';
+    ctx.lineWidth=lw;
+    ctx.lineCap='butt';
+    ctx.stroke();
+  });
+
+  // 3 — Zone tick marks at 70%, 100%, 130%
+  if(!opts.mini){
+    [0.7,1.0,1.3].forEach(zone=>{
+      const a=Math.PI+(zone/maxPct)*Math.PI;
+      const i0=cx+(r-lw*0.6)*Math.cos(a);const j0=cy+(r-lw*0.6)*Math.sin(a);
+      const i1=cx+(r+lw*0.2)*Math.cos(a);const j1=cy+(r+lw*0.2)*Math.sin(a);
+      ctx.beginPath();ctx.moveTo(i0,j0);ctx.lineTo(i1,j1);
+      ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=1.5;ctx.stroke();
+    });
+  }
+
+  // 4 — Value arc (filled portion from left to current value)
+  if(pctCap>0.015){
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,Math.PI,valueAngle,false);
+    ctx.strokeStyle=color;
+    ctx.lineWidth=lw;
+    ctx.lineCap='round';
+    ctx.stroke();
+  }
+
+  // 5 — Needle (reference-style: from center pivot to arc, white with drop shadow)
+  if(pctCap>=0){
+    const needleLen=r*(opts.mini?0.78:0.80);
+    const tipX=cx+needleLen*Math.cos(valueAngle);
+    const tipY=cy+needleLen*Math.sin(valueAngle);
+    // Shadow pass
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(tipX,tipY);
+    ctx.strokeStyle='rgba(0,0,0,0.4)';ctx.lineWidth=opts.mini?3:4;ctx.lineCap='round';ctx.stroke();
+    // White needle
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(tipX,tipY);
+    ctx.strokeStyle='rgba(255,255,255,0.95)';ctx.lineWidth=opts.mini?1.5:2.5;ctx.lineCap='round';ctx.stroke();
+    // Center pivot circle
+    const pivotR=opts.mini?lw*0.22:lw*0.28;
+    ctx.beginPath();ctx.arc(cx,cy,pivotR,0,Math.PI*2);
+    ctx.fillStyle=color;ctx.fill();
+    ctx.beginPath();ctx.arc(cx,cy,pivotR*0.5,0,Math.PI*2);
+    ctx.fillStyle='#fff';ctx.fill();
+  }
+
+  // 6 — Center value text (above pivot, below arc midpoint)
+  if(opts.showValue!==false){
+    const pctStr=(pct>0?Math.round(pct*100):0)+'%';
+    const fs=Math.round(r*(opts.mini?0.40:0.36));
+    ctx.fillStyle=pct>0?color:'#334155';
+    ctx.font=`800 ${fs}px 'Sora',system-ui,sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    const ty=opts.mini?cy-r*0.12:cy-r*0.18;
+    ctx.fillText(pctStr,cx,ty);
+  }
+
+  // 7 — Start/end caps
+  [[Math.PI,'#16163a'],[2*Math.PI,'#16163a']].forEach(([a,c])=>{
+    const px=cx+r*Math.cos(a);const py=cy+r*Math.sin(a);
+    ctx.beginPath();ctx.arc(px,py,lw*0.28,0,Math.PI*2);
+    ctx.fillStyle=c;ctx.fill();
+  });
+}
+
+// Animate gauge from 0 to target
+function animateGauge(canvas,targetPct,opts,duration){
+  duration=duration||900;
+  const start=performance.now();
+  const ease=t=>t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  function frame(now){
+    const t=Math.min((now-start)/duration,1);
+    drawGauge(canvas,targetPct*ease(t),opts);
+    if(t<1)requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ─── KPI / GAUGE DATA BINDING ─────────────────────────────────────────
+const parseNum=s=>parseFloat((s||'0').replace(/[^0-9.]/g,''))||0;
+
+function updateGauges(data){
+  const pipeline=data.pipeline||{};
+  const closing=data.closing_soon||{};
+  const agents=data.agent_leaderboard||[];
+
+  // --- Main GCI gauge ---
+  const ytd=parseNum(pipeline.ytd_gci);
+  const target=parseNum(pipeline.annual_target)||500000;
+  const gciPct=target>0?ytd/target:0;
+  const gciGauge=document.getElementById('gauge-gci');
+  if(gciGauge)animateGauge(gciGauge,gciPct,{},1000);
+
+  const badge=document.getElementById('gauge-gci-badge');
+  if(badge){
+    const z=gaugeZone(gciPct);
+    badge.textContent=z.label;
+    badge.className='gauge-zone-badge '+z.cls;
+  }
+  const vals=document.getElementById('gauge-gci-vals');
+  if(vals)vals.textContent=(pipeline.ytd_gci||'—')+' · '+(pipeline.annual_target||'$500k')+' goal';
+
+  // --- Pipeline gauge (active deals vs 40 benchmark = 100%) ---
+  const activeDeals=parseInt(pipeline.active_deals)||0;
+  const pipelinePct=activeDeals/40;
+  const pipelineGauge=document.getElementById('gauge-pipeline');
+  if(pipelineGauge)animateGauge(pipelineGauge,pipelinePct,{mini:true,showValue:false},800);
+  const pipeVal=document.getElementById('gauge-pipeline-val');
+  if(pipeVal){pipeVal.textContent=activeDeals;pipeVal.style.color=gaugeColor(pipelinePct);}
+
+  // --- Closing soon gauge (closing count vs 10 benchmark = 100%) ---
+  const closingCount=parseInt(closing.count)||0;
+  const closingPct=closingCount/10;
+  const closingGauge=document.getElementById('gauge-closing');
+  if(closingGauge)animateGauge(closingGauge,closingPct,{mini:true,showValue:false},800);
+  const closingVal=document.getElementById('gauge-closing-val');
+  if(closingVal){closingVal.textContent=closingCount;closingVal.style.color=gaugeColor(closingPct);}
+
+  // --- Gauge aria-label updates ---
+  const gciPct=document.getElementById('gauge-gci');if(gciPct)gciPct.setAttribute('aria-label','GCI gauge: '+(Math.round((parseNum(pipeline.ytd_gci)/((parseNum(pipeline.annual_target)||500000))*100)))+'% of annual target');
+  const plCanv=document.getElementById('gauge-pipeline');if(plCanv)plCanv.setAttribute('aria-label','Pipeline gauge: '+(pipeline.active_deals||0)+' active deals');
+  const clCanv=document.getElementById('gauge-closing');if(clCanv)clCanv.setAttribute('aria-label','Closing gauge: '+((data.closing_soon||{}).count||0)+' deals closing soon');
+
+  // --- Agent leaderboard ---
+  if(agents.length>0)renderAgentBoard(agents);
+}
+
+// ─── AGENT LEADERBOARD (22c/22d) ─────────────────────────────────────
+function renderAgentBoard(agents){
+  const board=document.getElementById('agent-board');
+  if(!board)return;
+  const now=new Date();
+  const monthsElapsed=now.getMonth()+1+now.getDate()/30;
+  const paceTarget=100000;
+
+  board.textContent=''; // clear safely (no innerHTML)
+  const fills=[];
+
+  agents.slice(0,7).forEach((a,i)=>{
+    const ytd=parseNum(a.ytd_gci);
+    const pace=monthsElapsed>0?Math.round(ytd/monthsElapsed*12):0;
+    const pct=Math.round(pace/paceTarget*100);
+    const pctCapped=Math.min(pct,100);
+    const color=gaugeColor(pct/100);
+    const arrow=pct>=100?'↑':pct>=70?'→':'↓';
+    const arrowColor=pct>=100?'#10b981':pct>=70?'#f59e0b':'#ef4444';
+    const parts=(a.agent||'').split(' ');
+    const display=parts[0]+(parts[1]?' '+parts[1][0]+'.':'');
+
+    const row=document.createElement('div');row.className='agent-row';
+    row.setAttribute('aria-label',display+': '+pct+'% of pace target');
+
+    const rank=document.createElement('span');rank.className='agent-rank';rank.textContent=i+1;
+    const name=document.createElement('span');name.className='agent-name';name.textContent=display;
+
+    const barBg=document.createElement('div');barBg.className='agent-bar-bg';
+    const barFill=document.createElement('div');barFill.className='agent-bar-fill';
+    barFill.style.cssText='width:0%;background:'+color;
+    barBg.appendChild(barFill);fills.push({el:barFill,target:pctCapped});
+
+    const pctEl=document.createElement('span');pctEl.className='agent-pct';pctEl.style.color=color;pctEl.textContent=pct+'%';
+    const arrowEl=document.createElement('span');arrowEl.className='agent-arrow';arrowEl.style.color=arrowColor;arrowEl.textContent=arrow;
+    arrowEl.setAttribute('aria-hidden','true');
+
+    row.appendChild(rank);row.appendChild(name);row.appendChild(barBg);row.appendChild(pctEl);row.appendChild(arrowEl);
+    board.appendChild(row);
+  });
+
+  // Animate bars
+  setTimeout(()=>fills.forEach(f=>{f.el.style.width=f.target+'%';}),100);
+}
+
+// ─── VOICE (21b) ─────────────────────────────────────────────────────
+let recognition=null,voiceActive=false,voiceEnabled=false,chartCounter=0,pendingFile=null,chartRegistry=new Map();
+function initVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return;
+  recognition=new SR();
+  recognition.continuous=false;recognition.interimResults=true;recognition.lang='en-US';
+  recognition.onresult=e=>{
+    const t=Array.from(e.results).map(r=>r[0].transcript).join('');
+    document.getElementById('dori-input').value=t;
+    if(e.results[0].isFinal){
+      voiceActive=false;document.getElementById('mic-btn').classList.remove('active');
+      document.getElementById('mic-btn').textContent='🎤';sendDori(t);
+    }
+  };
+  recognition.onend=()=>{voiceActive=false;document.getElementById('mic-btn').classList.remove('active');document.getElementById('mic-btn').textContent='🎤';};
+  recognition.onerror=()=>{voiceActive=false;document.getElementById('mic-btn').classList.remove('active');document.getElementById('mic-btn').textContent='🎤';};
+}
+function toggleVoice(){
+  if(!recognition){addMsg('dori','Voice not supported in this browser. Try Chrome.');return;}
+  if(voiceActive){recognition.stop();voiceActive=false;document.getElementById('mic-btn').classList.remove('active');document.getElementById('mic-btn').textContent='🎤';}
+  else{recognition.start();voiceActive=true;voiceEnabled=true;document.getElementById('mic-btn').classList.add('active');document.getElementById('mic-btn').textContent='⏹';}
+}
+function speakResponse(text){
+  if(!voiceEnabled||!window.speechSynthesis)return;
+  const t=text.replace(/[^\w\s.,!?$%]/g,'').substring(0,500);
+  const u=new SpeechSynthesisUtterance(t);u.rate=1.05;
+  const v=speechSynthesis.getVoices().find(v=>/samantha|karen|zira/i.test(v.name));
+  if(v)u.voice=v;speechSynthesis.speak(u);
+}
+
+// ─── FILE HANDLING (21a/21c) ──────────────────────────────────────────
+function handleFileSelect(input){
+  const file=input.files[0];if(!file)return;
+  document.getElementById('fp-name').textContent=file.name+' ('+Math.round(file.size/1024)+'KB)';
+  document.getElementById('file-preview-bar').style.display='block';
+  const reader=new FileReader();
+  reader.onload=e=>{pendingFile={base64:e.target.result.split(',')[1],mimeType:file.type,name:file.name,dataUrl:e.target.result};};
+  reader.readAsDataURL(file);input.value='';
+}
+function clearFile(){pendingFile=null;document.getElementById('file-preview-bar').style.display='none';}
+
+// ─── MESSAGE RENDERING ────────────────────────────────────────────────
+function fmt(){return new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});}
+function addMsg(role,text){
+  const msgs=document.getElementById('dori-messages');
+  const wrap=document.createElement('div');wrap.className='msg '+role;
+  const label=document.createElement('div');label.className='msg-label';label.textContent=role==='user'?'YOU':'DORI';
+  const bubble=document.createElement('div');bubble.className='msg-bubble';bubble.textContent=text;
+  const time=document.createElement('div');time.className='msg-time';time.textContent=fmt();
+  wrap.appendChild(label);wrap.appendChild(bubble);wrap.appendChild(time);
+  msgs.appendChild(wrap);msgs.scrollTop=msgs.scrollHeight;return bubble;
+}
+function addUserMsg(text,file){
+  const msgs=document.getElementById('dori-messages');
+  const wrap=document.createElement('div');wrap.className='msg user';
+  const label=document.createElement('div');label.className='msg-label';label.textContent='YOU';
+  wrap.appendChild(label);
+  if(file&&file.mimeType.startsWith('image/')){
+    const img=document.createElement('img');img.src=file.dataUrl;img.className='msg-img';img.alt='Attached image: '+file.name;wrap.appendChild(img);
+  }
+  const bubble=document.createElement('div');bubble.className='msg-bubble';bubble.textContent=text;
+  wrap.appendChild(bubble);
+  const time=document.createElement('div');time.className='msg-time';time.textContent=fmt();
+  wrap.appendChild(time);msgs.appendChild(wrap);msgs.scrollTop=msgs.scrollHeight;
+}
+function addDoriMessage(data){
+  const msgs=document.getElementById('dori-messages');
+  const wrap=document.createElement('div');wrap.className='msg dori';
+  const label=document.createElement('div');label.className='msg-label';label.textContent='DORI';wrap.appendChild(label);
+  const alerts=data.alerts||[];
+  if(alerts.length>0){
+    const ad=document.createElement('div');ad.className='dori-alerts';
+    alerts.forEach(a=>{
+      const item=document.createElement('div');
+      const ok=a.startsWith('TARGET')||a.startsWith('ON TRACK');const urg=a.startsWith('CLOSING');
+      item.className='alert-item'+(ok?' success':urg?' urgent':'');
+      item.textContent=(ok?'✅ ':urg?'🔴 ':'⚠️ ')+a;ad.appendChild(item);
+    });wrap.appendChild(ad);
+  }
+  const bubble=document.createElement('div');bubble.className='msg-bubble';bubble.textContent=data.response||'No data returned.';wrap.appendChild(bubble);
+  if(data.chart&&data.chart.labels){
+    const cw=document.createElement('div');cw.className='chart-wrap';
+    const ct=document.createElement('div');ct.className='chart-title';ct.textContent=data.chart.title||'Chart';cw.appendChild(ct);
+    const canvas=document.createElement('canvas');canvas.className='chart-canvas';canvas.id='chart-'+Date.now()+'-'+(chartCounter++);cw.appendChild(canvas);
+    wrap.appendChild(cw);
+    setTimeout(()=>{
+      try{
+        if(chartRegistry.has(canvas.id)){chartRegistry.get(canvas.id).destroy();chartRegistry.delete(canvas.id);}
+        const instance=new Chart(canvas,{type:data.chart.type||'bar',data:{labels:data.chart.labels,datasets:data.chart.datasets},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#94a3b8',font:{family:"'DM Mono'",size:11}}},title:{display:false}},scales:data.chart.type==='pie'||data.chart.type==='doughnut'?undefined:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}},y:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}}}});
+        chartRegistry.set(canvas.id,instance);
+      }catch(e){}
+    },50);
+  }
+  const sugg=data.suggestions||[];
+  if(sugg.length>0){
+    const chips=document.createElement('div');chips.className='suggestion-chips';
+    sugg.forEach(s=>{const chip=document.createElement('button');chip.className='chip';chip.textContent=s;chip.onclick=()=>quickAsk(s);chips.appendChild(chip);});
+    wrap.appendChild(chips);
+  }
+  const time=document.createElement('div');time.className='msg-time';time.textContent=fmt();wrap.appendChild(time);
+  msgs.appendChild(wrap);msgs.scrollTop=msgs.scrollHeight;
+  if(data.health){const h=data.health;const el=document.getElementById('gauge-gci-badge');if(el&&!data.chart){}}
+  speakResponse(data.response||'');
+}
+function addThinking(lbl){
+  const msgs=document.getElementById('dori-messages');
+  const wrap=document.createElement('div');wrap.className='msg dori';wrap.id='dori-thinking';
+  const label=document.createElement('div');label.className='msg-label';label.textContent='DORI';
+  const dots=document.createElement('div');dots.className='thinking';
+  dots.innerHTML='<div class="dot"></div><div class="dot"></div><div class="dot"></div>'+(lbl?'<span style="font-size:11px;color:var(--mut);margin-left:6px">'+lbl+'</span>':'');
+  wrap.appendChild(label);wrap.appendChild(dots);msgs.appendChild(wrap);msgs.scrollTop=msgs.scrollHeight;
+}
+function removeThinking(){const el=document.getElementById('dori-thinking');if(el)el.remove();}
+
+// ─── SEND ─────────────────────────────────────────────────────────────
+async function sendDori(prefill){
+  const input=document.getElementById('dori-input');const btn=document.getElementById('send-btn');
+  const msg=(prefill||input.value).trim();const file=pendingFile;
+  if(!msg&&!file)return;
+  input.value='';btn.disabled=true;
+  addUserMsg(msg||'Analyze attached file',file);
+  if(file)clearFile();
+  if(file){
+    addThinking('analyzing...');
+    try{
+      const r=await fetch(VISION_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file_base64:file.base64,mime_type:file.mimeType,context:msg||'Analyze this for real estate business context.'})});
+      const d=await r.json();removeThinking();
+      addDoriMessage({response:d.response||d.text||'Analysis complete.',alerts:[],suggestions:['What deals are stale?','Show me agent performance as a chart','Revenue forecast']});
+    }catch(e){removeThinking();addMsg('dori','Vision analysis unavailable.');}
+  }else{
+    addThinking();
+    try{
+      const r=await fetch(DORI_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+      const d=await r.json();removeThinking();addDoriMessage(d);
+    }catch(e){removeThinking();addMsg('dori','Unable to reach data systems.');}
+  }
+  btn.disabled=false;input.focus();
+}
+function quickAsk(q){document.getElementById('dori-input').value=q;closeSidebar();sendDori(q);}
+async function loadEmailIntel(){
+  const btn=document.getElementById('send-btn');btn.disabled=true;
+  addMsg('user','Show me email intelligence');addThinking('reading Gmail...');
+  try{
+    const r=await fetch(EMAIL_API);const d=await r.json();removeThinking();
+    addDoriMessage({response:d.response||'No email data.',alerts:d.alerts||[],suggestions:['What should I know right now?','Which deals are stale?','What closes soon?']});
+  }catch(e){removeThinking();addMsg('dori','Email unavailable.');}
+  btn.disabled=false;document.getElementById('dori-input').focus();
+}
+document.getElementById('dori-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendDori();}});
+
+// ─── GAUGE KPI FETCH ──────────────────────────────────────────────────
+let gaugesReady=false;
+async function loadKPIs(){
+  if(document.visibilityState==='hidden')return; // skip polling when tab is not visible
+  try{
+    const r=await fetch(INTEL_API+'?type=all&days=7');
+    const d=await r.json();
+    updateGauges(d);
+    gaugesReady=true;
+  }catch(e){/* silent */}
+}
+
+// ─── MOBILE SIDEBAR ───────────────────────────────────────────────────
+function toggleSidebar(){
+  const sb=document.getElementById('main-sidebar');
+  const ov=document.getElementById('sidebar-overlay');
+  const btn=document.getElementById('hamburger-btn');
+  const open=sb.classList.toggle('mobile-open');
+  ov.classList.toggle('open',open);
+  btn.setAttribute('aria-expanded',open);
+  btn.setAttribute('aria-label',open?'Close sidebar navigation':'Open sidebar navigation');
+}
+function closeSidebar(){
+  document.getElementById('main-sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  const btn=document.getElementById('hamburger-btn');
+  btn.setAttribute('aria-expanded','false');
+  btn.setAttribute('aria-label','Open sidebar navigation');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+function init(){
+  initVoice();
+  if(window.speechSynthesis){speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices();}
+  // Draw placeholder gauges immediately
+  setTimeout(()=>{
+    const gciC=document.getElementById('gauge-gci');const plC=document.getElementById('gauge-pipeline');const clC=document.getElementById('gauge-closing');
+    if(gciC)drawGauge(gciC,0,{});
+    if(plC)drawGauge(plC,0,{mini:true,showValue:false});
+    if(clC)drawGauge(clC,0,{mini:true,showValue:false});
+  },50);
+  loadKPIs();
+  setInterval(loadKPIs,120000);
+  setTimeout(()=>sendDori('What are the most important things I should know right now?'),800);
+}
+
+// Redraw gauges on window resize
+let resizeTimer;
+window.addEventListener('resize',()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>{if(gaugesReady)loadKPIs();},300);
+});
+</script>
+</body>
+</html>
