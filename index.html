@@ -228,7 +228,7 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);height:52px;
 
       <!-- ─── ZILLOW PREFERRED GAUGES ─── -->
       <div class="sb-divider"></div>
-      <div class="sb-sec">Zillow Preferred</div>
+      <div class="sb-sec">Zillow Preferred <span id="zg-source" style="color:#f59e0b;font-weight:700" title="Illustrative values. Accurate pCVR / Pickup / Speed require the Monthly-Metrics FUB pipeline feed via fetchZillow().">· SAMPLE</span></div>
       <div class="gauge-wrap">
         <!-- pCVR hero (largest — 50% of the Zillow Preferred score) -->
         <div class="zillow-hero">
@@ -561,14 +561,21 @@ function renderZillow(){
   });
 }
 
-// Optional: pull live numbers from the intelligence API (same shape as
-// ZILLOW_METRICS). Falls back silently to the representative values above.
+// Pull live numbers from the metrics feed (same shape as ZILLOW_METRICS).
+// Until the Monthly-Metrics pipeline publishes accurate pCVR/Pickup/Speed/Appt,
+// no endpoint returns {metrics:{...}}, so this no-ops and the gauges stay
+// SAMPLE. When a feed exists, it flips the badge to LIVE.
 async function fetchZillow(){
   try{
     const r=await fetch(INTEL_API+'?type=zillow',{cache:'no-store'});
     if(!r.ok)return; const d=await r.json();
-    if(d&&d.metrics){Object.assign(ZILLOW_METRICS,d.metrics);renderZillow();}
-  }catch(e){/* keep representative values */}
+    if(d&&d.metrics){
+      Object.assign(ZILLOW_METRICS,d.metrics);
+      renderZillow();
+      const src=document.getElementById('zg-source');
+      if(src){src.textContent='· LIVE';src.style.color='#10b981';}
+    }
+  }catch(e){/* keep representative values, stay SAMPLE */}
 }
 
 // ─── KPI / GAUGE DATA BINDING ─────────────────────────────────────────
