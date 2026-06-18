@@ -18,12 +18,13 @@
     "speed"
   ],
   "meta": {
-    "generated_at_utc": "2026-06-18T13:33:48+00:00",
+    "generated_at_utc": "2026-06-18T13:59:49+00:00",
     "agents": 28,
+    "agents_with_speed": 0,
     "zillow_leads": 87,
     "appointments_set": 24,
     "appointment_rate": 0.2759,
     "source": "fub_daily_metrics (MTD, Zillow Preferred filtered)",
-    "notes": "Only appointment_rate is published (verified). pickup = person-level proxy (~100% median, unreliable until computed from /v1/calls); speed = no firstCall data; pcvr = Zillow-UI-only; csat/zhl not in FUB."
+    "notes": "appointment_rate verified live. pickup = person-proxy (~100% median, needs /v1/calls); speed = no firstCall data; pcvr = Zillow-UI-only; csat/zhl not in FUB."
   }
 }
