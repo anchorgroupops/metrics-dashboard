@@ -3,87 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#046568">
+<meta name="theme-color" content="#F7ECE1">
+<link rel="icon" href="favicon.png">
 <title>Anchor Metrics</title>
 <style>
   :root{
-    --sand:#F7ECE1; --teal:#046568; --teal2:#2aa7a0; --aqua:#82C8C3;
-    --green:#5FB87A; --red:#C0392B; --amber:#f59e0b;
-    --ink:#15201f; --mut:#6b7a78; --card:#ffffff; --line:#e6ddd2;
-    --shadow:0 2px 10px rgba(4,101,104,.08);
+    --sand:#F7ECE1; --sand2:#efe3d4; --teal:#046568; --teal2:#2aa7a0; --aqua:#82C8C3;
+    --green:#5FB87A; --red:#C0392B; --amber:#d98c1f;
+    --ink:#1b2624; --mut:#7c8a87; --card:#ffffff; --line:#ece2d4;
+    --shadow:0 1px 3px rgba(4,101,104,.07),0 6px 18px rgba(4,101,104,.06);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
   body{font-family:-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--sand);color:var(--ink);
-       font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;
-       padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+       font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
   .hidden{display:none!important}
+  img{max-width:100%}
   /* ── Login ── */
   #login{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-  .logo{font-size:13px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--teal);margin-bottom:6px}
-  .logo span{color:var(--aqua)}
-  .lcard{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:30px 22px;width:100%;max-width:380px}
-  .lcard h1{font-size:22px;font-weight:800;margin-bottom:4px}
-  .lcard p{font-size:14px;color:var(--mut);margin-bottom:20px}
-  label{display:block;font-size:12px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px}
-  input{width:100%;font-size:16px;padding:14px 15px;border:1.5px solid var(--line);border-radius:12px;background:#fff;outline:none;transition:border-color .15s}
+  #login img.brand{width:180px;margin-bottom:22px}
+  .lcard{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:28px 22px;width:100%;max-width:370px}
+  .lcard h1{font-size:21px;font-weight:800;margin-bottom:3px}
+  .lcard p{font-size:14px;color:var(--mut);margin-bottom:18px}
+  label{display:block;font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px}
+  input{width:100%;font-size:16px;padding:14px 15px;border:1.5px solid var(--line);border-radius:12px;background:#fff;outline:none}
   input:focus{border-color:var(--teal)}
-  .btn{width:100%;font-size:16px;font-weight:700;padding:15px;border:none;border-radius:12px;background:var(--teal);color:#fff;
-       cursor:pointer;margin-top:20px;min-height:50px;transition:opacity .15s}
-  .btn:active{opacity:.8}
-  .btn.sec{background:#fff;color:var(--teal);border:1.5px solid var(--line);margin-top:10px}
+  .btn{width:100%;font-size:16px;font-weight:700;padding:15px;border:none;border-radius:12px;background:var(--teal);color:#fff;cursor:pointer;margin-top:18px;min-height:52px}
+  .btn:active{background:#03575a}
   .err{color:var(--red);font-size:13px;font-weight:600;margin-top:12px;min-height:18px;text-align:center}
-  /* ── App ── */
-  header{position:sticky;top:0;z-index:5;background:var(--teal);color:#fff;
-         padding:calc(14px + env(safe-area-inset-top)) 16px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-  header .who{min-width:0}
-  header .who .nm{font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  header .who .rl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--aqua);font-weight:700}
-  .logout{flex-shrink:0;background:rgba(255,255,255,.14);color:#fff;border:none;border-radius:10px;
-          padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;min-height:42px}
-  .logout:active{opacity:.8}
-  main{padding:16px 14px 40px;max-width:560px;margin:0 auto}
-  .sec-lbl{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:18px 2px 10px;display:flex;align-items:center;gap:8px}
-  .sec-lbl .pill{font-size:10px;background:rgba(95,184,122,.16);color:#3f8f5b;padding:2px 8px;border-radius:20px;letter-spacing:.06em}
-  .selectwrap{margin:4px 0 6px}
-  select{width:100%;font-size:16px;padding:13px 15px;border:1.5px solid var(--line);border-radius:12px;background:#fff;min-height:48px}
+  /* ── Header ── */
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:calc(12px + env(safe-area-inset-top)) 16px 12px;
+         position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  header img.logo{height:30px}
+  .signout{background:var(--sand);color:var(--teal);border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;cursor:pointer;min-height:42px}
+  .signout:active{background:var(--sand2)}
+  .profile{display:flex;align-items:center;gap:11px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+  .avatar{width:42px;height:42px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;flex-shrink:0}
+  .profile .nm{font-weight:800;font-size:16px;line-height:1.1}
+  .profile .role{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal2);margin-top:2px}
+  main{padding:14px 14px 48px;max-width:680px;margin:0 auto}
+  .sec{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin:18px 4px 10px;display:flex;align-items:center;gap:8px}
+  .sec .ct{font-size:10px;background:var(--sand2);color:var(--teal);padding:2px 8px;border-radius:20px}
+  /* ── Gauge grid ── */
   .grid{display:grid;grid-template-columns:1fr;gap:12px}
-  @media(min-width:480px){.grid{grid-template-columns:1fr 1fr}.hero{grid-column:1/-1}}
-  .gcard{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:16px 14px;text-align:center}
-  .gcard .lab{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
-  .gcard canvas{display:block;width:100%;height:120px;margin:6px 0 2px}
-  .gcard.hero canvas{height:150px}
-  .gcard .badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;padding:3px 10px;border-radius:20px;margin-top:2px}
+  @media(min-width:520px){.grid{grid-template-columns:1fr 1fr 1fr}}
+  .gcard{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:14px 12px 12px;text-align:center}
+  .gcard .lab{font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--mut)}
+  .gcard canvas{display:block;width:100%;height:118px;margin:4px 0 0}
+  .gcard .badge{display:inline-block;font-size:11px;font-weight:800;padding:3px 11px;border-radius:20px;margin-top:2px}
   .badge.green{background:rgba(95,184,122,.16);color:#3f8f5b}
-  .badge.teal{background:rgba(4,101,104,.14);color:var(--teal2)}
+  .badge.teal{background:rgba(4,101,104,.13);color:var(--teal)}
   .badge.red{background:rgba(192,57,43,.12);color:var(--red)}
-  .badge.cyan{background:rgba(130,200,195,.18);color:#2f9e96}
-  .badge.na{background:rgba(107,122,120,.12);color:var(--mut)}
-  .gcard .sub{font-size:12px;color:var(--mut);margin-top:4px}
-  .mentees{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:6px 4px}
-  .mrow{display:flex;align-items:center;gap:10px;padding:13px 12px;border-bottom:1px solid var(--line);cursor:pointer;min-height:54px}
-  .mrow:last-child{border-bottom:none}
-  .mrow:active{background:var(--sand)}
-  .mrow .av{width:36px;height:36px;border-radius:50%;background:var(--aqua);color:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0}
-  .mrow .nm{font-weight:700;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .mrow .tt{font-size:12px;color:var(--mut)}
-  .legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:11px;color:var(--mut);margin:14px 2px 0}
-  .legend span{display:flex;align-items:center;gap:4px}
-  .dot{width:9px;height:9px;border-radius:50%}
-  .foot{text-align:center;font-size:11px;color:var(--mut);margin-top:22px;line-height:1.7}
-  .spin{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:s .8s linear infinite;margin:40px auto}
+  .badge.cyan{background:rgba(130,200,195,.2);color:#2f9e96}
+  .badge.na{background:rgba(124,138,135,.14);color:var(--mut)}
+  /* ── Agent rows (admin all-agents + mentees) ── */
+  .alist{background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .arow{padding:13px 14px;border-bottom:1px solid var(--line)}
+  .arow:last-child{border-bottom:none}
+  .ahead{display:flex;align-items:center;gap:11px;cursor:pointer;min-height:46px}
+  .arow .nm{font-weight:700;font-size:15px;flex:1;min-width:0}
+  .arow .tt{font-size:12px;color:var(--mut);font-weight:500}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .chip{font-size:12px;font-weight:700;padding:5px 10px;border-radius:9px;display:flex;align-items:center;gap:5px;background:var(--sand)}
+  .chip .k{font-weight:600;color:var(--mut);font-size:11px}
+  .chip .dot{width:8px;height:8px;border-radius:50%}
+  .chev{color:var(--mut);font-size:13px;transition:transform .15s}
+  .arow.open .chev{transform:rotate(90deg)}
+  .agauges{display:none;margin-top:10px}
+  .arow.open .agauges{display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;font-size:11px;color:var(--mut);margin:16px 4px 4px}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .ldot{width:9px;height:9px;border-radius:50%}
+  .foot{text-align:center;font-size:11px;color:var(--mut);margin-top:18px;line-height:1.7}
+  .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--teal);border-radius:50%;animation:s .8s linear infinite;margin:44px auto}
   @keyframes s{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<!-- ── LOGIN ── -->
+<!-- LOGIN -->
 <div id="login">
-  <div class="logo">THE ANCHOR <span>GROUP</span></div>
+  <img class="brand" src="anchor-logo.png" alt="The Anchor Group">
   <div class="lcard">
     <h1>Performance Portal</h1>
     <p>Sign in with your Anchor Group work email.</p>
-    <form id="loginForm" autocomplete="on">
+    <form id="loginForm">
       <label for="email">Work Email</label>
       <input id="email" type="email" inputmode="email" autocomplete="username" placeholder="you@anchorgroup.com" required>
       <label for="pw">Password</label>
@@ -92,175 +95,163 @@
     </form>
     <div class="err" id="loginErr"></div>
   </div>
-  <div class="foot">Each agent sees only their own metrics. Read-only · no data leaves Anchor.</div>
+  <div class="foot">You only ever see your own metrics. Read-only.</div>
 </div>
 
-<!-- ── APP ── -->
+<!-- APP -->
 <div id="app" class="hidden">
   <header>
-    <div class="who"><div class="nm" id="hNm">—</div><div class="rl" id="hRole">—</div></div>
-    <button class="logout" id="logoutBtn">Sign out</button>
+    <img class="logo" src="anchor-logo.png" alt="The Anchor Group">
+    <button class="signout" id="signout">Sign out</button>
   </header>
+  <div class="profile">
+    <div class="avatar" id="pAv">–</div>
+    <div><div class="nm" id="pNm">—</div><div class="role" id="pRole">—</div></div>
+  </div>
   <main>
     <div id="content"><div class="spin"></div></div>
     <div class="legend">
-      <span><i class="dot" style="background:#C0392B"></i>Below Min</span>
-      <span><i class="dot" style="background:#046568"></i>Above Min</span>
-      <span><i class="dot" style="background:#5FB87A"></i>Best of Zillow</span>
-      <span><i class="dot" style="background:#82C8C3"></i>Elite</span>
+      <span><i class="ldot" style="background:#C0392B"></i>Below Min</span>
+      <span><i class="ldot" style="background:#046568"></i>Above Min</span>
+      <span><i class="ldot" style="background:#5FB87A"></i>Best of Zillow</span>
+      <span><i class="ldot" style="background:#82C8C3"></i>Elite</span>
     </div>
-    <div class="foot">Zillow Preferred · MTD · live from Follow Up Boss<br><span id="stamp"></span></div>
+    <div class="foot">Zillow Preferred · month-to-date · live from Follow Up Boss<br><span id="stamp"></span></div>
   </main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 const SB_URL='https://zedujsbhqjxzjjmyjhok.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplZHVqc2JocWp4empqbXlqaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MzA4MDQsImV4cCI6MjA5NjUwNjgwNH0.9yc0dim0qUtcy6l-SJxq8pOoeexq5VA2zzmUCpfoR3I';
-const sb = supabase.createClient(SB_URL, SB_ANON, {auth:{persistSession:true,autoRefreshToken:true}});
+const sb=supabase.createClient(SB_URL,SB_ANON,{auth:{persistSession:true,autoRefreshToken:true}});
 const PERIOD='2026-06';
 const METRICS=[
-  {key:'appt',   label:'Appointment Rate',     target:0.30, dir:'higher', unit:'percent', hero:true},
-  {key:'pickup', label:'Pickup Rate',          target:0.25, dir:'higher', unit:'percent'},
-  {key:'speed',  label:'Speed to Lead',        target:120,  dir:'lower',  unit:'seconds'},
+  {key:'appt',  label:'Appointments', target:0.30, dir:'higher', unit:'percent'},
+  {key:'pickup',label:'Pickup Rate',  target:0.25, dir:'higher', unit:'percent'},
+  {key:'speed', label:'Speed to Lead',target:120,  dir:'lower',  unit:'seconds'},
 ];
 const ZP={red:'#C0392B',teal:'#046568',green:'#5FB87A',cyan:'#82C8C3'};
 const ZP_CLS=['red','teal','green','cyan'], ZP_LAB=['Below Min','Above Min','Best of Zillow','Elite'];
-
 const $=id=>document.getElementById(id);
-function fmt(v,u){if(v==null)return'—';if(u==='percent')return(v*100).toFixed(1)+'%';if(u==='seconds')return v<60?Math.round(v)+'s':v<3600?Math.round(v/60)+'m':(v/3600).toFixed(1)+'h';return String(v);}
+const fmt=(v,u)=>v==null?'—':u==='percent'?(v*100).toFixed(0)+'%':u==='seconds'?(v<60?Math.round(v)+'s':v<3600?Math.round(v/60)+'m':(v/3600).toFixed(1)+'h'):''+v;
 
-// ── Gauge (red→teal→green→cyan, Zillow min pinned ~10% from bottom) ──
-function fracs(target,dir){
+function fr(target,dir){
   let bad,good,toF;
   if(dir==='lower'){good=0;bad=target/0.9;const s=(bad-good)||1;toF=v=>Math.max(0,Math.min(1,(bad-v)/s));}
-  else{const elite=target*2.5;good=elite*1.12;bad=Math.max(0,(target-0.1*good)/0.9);const s=(good-bad)||1;toF=v=>Math.max(0,Math.min(1,(v-bad)/s));}
-  const boz=dir==='lower'?target*0.6:target*1.5, el=dir==='lower'?target*0.4:target*2.5;
-  return {toF,t:0.10,b:Math.max(0.12,Math.min(0.92,toF(boz))),e:Math.max(0.16,Math.min(0.98,toF(el)))};
+  else{const el=target*2.5;good=el*1.12;bad=Math.max(0,(target-0.1*good)/0.9);const s=(good-bad)||1;toF=v=>Math.max(0,Math.min(1,(v-bad)/s));}
+  return {toF,t:0.10,b:Math.max(0.12,Math.min(0.92,toF(dir==='lower'?target*0.6:target*1.5))),e:Math.max(0.16,Math.min(0.98,toF(dir==='lower'?target*0.4:target*2.5)))};
 }
+function zoneIdx(m){ if(m.value==null)return -1; const p=fr(m.target,m.dir),v=p.toF(m.value); return v<p.t?0:v<p.b?1:v<p.e?2:3; }
 function drawGauge(cv,m){
-  const dpr=window.devicePixelRatio||1, W=cv.clientWidth||260, H=cv.clientHeight||120;
+  const dpr=window.devicePixelRatio||1,W=cv.clientWidth||220,H=cv.clientHeight||118;
   cv.width=W*dpr;cv.height=H*dpr;const x=cv.getContext('2d');x.scale(dpr,dpr);x.clearRect(0,0,W,H);
-  const cx=W/2,cy=H*0.86,r=Math.min(W*0.42,H*0.82),lw=r*0.20;
+  const cx=W/2,cy=H*0.84,r=Math.min(W*0.42,H*0.82),lw=r*0.2;
   x.beginPath();x.arc(cx,cy,r,Math.PI,2*Math.PI);x.strokeStyle='#ece3d7';x.lineWidth=lw;x.lineCap='butt';x.stroke();
   if(m.value==null){
-    x.beginPath();x.arc(cx,cy,r,Math.PI,2*Math.PI);x.strokeStyle='rgba(107,122,120,.25)';x.lineWidth=lw;x.setLineDash([2,7]);x.lineCap='round';x.stroke();x.setLineDash([]);
     x.fillStyle='#9aa6a4';x.font=`800 ${Math.round(r*0.22)}px Segoe UI,sans-serif`;x.textAlign='center';x.textBaseline='middle';x.fillText('N/A',cx,cy-r*0.2);
     return {cls:'na',lab:'Not Available'};
   }
-  const p=fracs(m.target,m.dir),bd=[0,p.t,p.b,p.e,1],cols=[ZP.red,ZP.teal,ZP.green,ZP.cyan];
+  const p=fr(m.target,m.dir),bd=[0,p.t,p.b,p.e,1],cols=[ZP.red,ZP.teal,ZP.green,ZP.cyan];
   for(let i=0;i<4;i++){if(bd[i+1]-bd[i]<0.004)continue;x.beginPath();x.arc(cx,cy,r,Math.PI+bd[i]*Math.PI,Math.PI+bd[i+1]*Math.PI);x.strokeStyle=cols[i];x.lineWidth=lw;x.stroke();}
-  const vf=p.toF(m.value),zi=vf<p.t?0:vf<p.b?1:vf<p.e?2:3,va=Math.PI+vf*Math.PI;
-  const nl=r*0.8,tx=cx+nl*Math.cos(va),ty=cy+nl*Math.sin(va);
-  x.beginPath();x.moveTo(cx,cy);x.lineTo(tx,ty);x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=4;x.lineCap='round';x.stroke();
-  x.beginPath();x.moveTo(cx,cy);x.lineTo(tx,ty);x.strokeStyle=cols[zi];x.lineWidth=2.5;x.stroke();
-  x.beginPath();x.arc(cx,cy,lw*0.3,0,7);x.fillStyle=cols[zi];x.fill();x.beginPath();x.arc(cx,cy,lw*0.15,0,7);x.fillStyle='#fff';x.fill();
-  x.fillStyle=cols[zi];x.font=`800 ${Math.round(r*0.34)}px Segoe UI,sans-serif`;x.textAlign='center';x.textBaseline='middle';
-  x.fillText(fmt(m.value,m.unit),cx,cy-r*0.16);
+  const vf=p.toF(m.value),zi=vf<p.t?0:vf<p.b?1:vf<p.e?2:3,va=Math.PI+vf*Math.PI,nl=r*0.78,tx=cx+nl*Math.cos(va),ty=cy+nl*Math.sin(va);
+  x.beginPath();x.moveTo(cx,cy);x.lineTo(tx,ty);x.strokeStyle=cols[zi];x.lineWidth=3;x.lineCap='round';x.stroke();
+  x.beginPath();x.arc(cx,cy,lw*0.3,0,7);x.fillStyle=cols[zi];x.fill();x.beginPath();x.arc(cx,cy,lw*0.14,0,7);x.fillStyle='#fff';x.fill();
+  x.fillStyle=cols[zi];x.font=`800 ${Math.round(r*0.32)}px Segoe UI,sans-serif`;x.textAlign='center';x.textBaseline='middle';x.fillText(fmt(m.value,m.unit),cx,cy-r*0.14);
   return {cls:ZP_CLS[zi],lab:ZP_LAB[zi]};
 }
-function gaugeCard(m){
-  const c=document.createElement('div');c.className='gcard'+(m.hero?' hero':'');
-  c.innerHTML=`<div class="lab">${m.label}</div><canvas></canvas><div class="badge na">—</div>`+
-    (m.sub?`<div class="sub">${m.sub}</div>`:'');
-  requestAnimationFrame(()=>{const z=drawGauge(c.querySelector('canvas'),m);const b=c.querySelector('.badge');b.className='badge '+z.cls;b.textContent=z.lab;});
-  return c;
+function gaugeGrid(valsByKey){
+  const g=document.createElement('div');g.className='grid';
+  METRICS.forEach(d=>{
+    const v=valsByKey[d.key];
+    const c=document.createElement('div');c.className='gcard';
+    c.innerHTML=`<div class="lab">${d.label}</div><canvas></canvas><div class="badge na">—</div>`;
+    requestAnimationFrame(()=>{const z=drawGauge(c.querySelector('canvas'),{...d,value:v==null?null:v});const b=c.querySelector('.badge');b.className='badge '+z.cls;b.textContent=z.lab;});
+    g.appendChild(c);
+  });
+  return g;
+}
+function chips(valsByKey){
+  const w=document.createElement('div');w.className='chips';
+  METRICS.forEach(d=>{
+    const v=valsByKey[d.key], zi=zoneIdx({...d,value:v==null?null:v});
+    const col=zi<0?'#c8cfcd':[ZP.red,ZP.teal,ZP.green,ZP.cyan][zi];
+    const c=document.createElement('div');c.className='chip';
+    c.innerHTML=`<span class="dot" style="background:${col}"></span><span class="k">${d.label.split(' ')[0]}</span> ${fmt(v==null?null:v,d.unit)}`;
+    w.appendChild(c);
+  });
+  return w;
 }
 
-// ── Data ──
 async function metricsFor(agentId){
   const {data}=await sb.from('agent_metrics').select('metric_key,value,target').eq('agent_id',agentId).eq('period',PERIOD);
-  const map={};(data||[]).forEach(r=>map[r.metric_key]={value:r.value,target:r.target});return map;
+  const m={};(data||[]).forEach(r=>m[r.metric_key]=r.value);return m;
 }
 async function teamMetrics(){
-  // Team gauges come from the public, daily-refreshed zillow-metrics.json (no
-  // PII), so they stay live without server-side writes. Falls back to the
-  // Supabase team_averages table if the file isn't reachable.
-  try{
-    const r=await fetch('zillow-metrics.json?t='+Date.now(),{cache:'no-store'});
-    if(r.ok){const d=await r.json();const m={};
-      ['pickup','speed','appt'].forEach(k=>{if(d.metrics&&d.metrics[k]) m[k]=d.metrics[k].value;});
-      if(Object.keys(m).length) return m;}
-  }catch(e){}
+  try{const r=await fetch('zillow-metrics.json?t='+Date.now(),{cache:'no-store'});
+    if(r.ok){const d=await r.json();const m={};['pickup','speed','appt'].forEach(k=>{if(d.metrics&&d.metrics[k])m[k]=d.metrics[k].value;});if(Object.keys(m).length)return m;}}catch(e){}
   const {data}=await sb.from('team_averages').select('metric_key,team_avg').eq('period',PERIOD);
-  const map={};(data||[]).forEach(r=>map[r.metric_key]=r.team_avg);return map;
+  const m={};(data||[]).forEach(r=>m[r.metric_key]=r.team_avg);return m;
 }
-function renderGauges(into,valsByKey,note){
-  const g=document.createElement('div');g.className='grid';
-  METRICS.forEach(def=>{
-    const v=valsByKey[def.key];
-    g.appendChild(gaugeCard({...def, value:(v==null?null:(typeof v==='object'?v.value:v)), sub:note}));
-  });
-  into.appendChild(g);
-}
-
-async function showAgent(agent, team){
-  const c=$('content');c.innerHTML='';
-  const lbl=document.createElement('div');lbl.className='sec-lbl';
-  lbl.innerHTML=`${agent.name} <span class="pill">YOUR METRICS</span>`;c.appendChild(lbl);
-  const vals=await metricsFor(agent.agent_id);
-  renderGauges(c, vals, '');
-  // Team context
-  const tl=document.createElement('div');tl.className='sec-lbl';tl.textContent='Team average';c.appendChild(tl);
-  renderGauges(c, team, '');
-}
-
-async function buildAgentView(me, agents, team){
-  const c=$('content');c.innerHTML='';
-  // Own gauges
-  const lbl=document.createElement('div');lbl.className='sec-lbl';lbl.innerHTML=`${me.name} <span class="pill">YOUR METRICS</span>`;c.appendChild(lbl);
-  renderGauges(c, await metricsFor(me.agent_id), '');
-  // Team
-  const tl=document.createElement('div');tl.className='sec-lbl';tl.textContent='Team average';c.appendChild(tl);
-  renderGauges(c, team, '');
-  // Mentees
-  const mentees=agents.filter(a=>a.agent_id!==me.agent_id && (a.mentor_email||'').toLowerCase()===(me.email||'').toLowerCase());
-  if(mentees.length){
-    const ml=document.createElement('div');ml.className='sec-lbl';ml.innerHTML=`Your mentees <span class="pill">${mentees.length}</span>`;c.appendChild(ml);
-    const box=document.createElement('div');box.className='mentees';
-    mentees.forEach(a=>box.appendChild(menteeRow(a,team)));c.appendChild(box);
+function agentRow(a, vals, expandable){
+  const row=document.createElement('div');row.className='arow';
+  const ini=(a.name||'?').trim().split(/\s+/).map(s=>s[0]).slice(0,2).join('');
+  row.innerHTML=`<div class="ahead"><div class="avatar" style="width:36px;height:36px;font-size:14px">${ini}</div>`+
+    `<div class="nm">${a.name}<div class="tt">${a.title||'Agent'}</div></div>`+(expandable?'<span class="chev">›</span>':'')+`</div>`;
+  row.querySelector('.ahead').after(chips(vals));
+  if(expandable){
+    const g=document.createElement('div');g.className='agauges';g.appendChild(gaugeGrid(vals));row.appendChild(g);
+    row.querySelector('.ahead').onclick=()=>row.classList.toggle('open');
   }
+  return row;
 }
-function menteeRow(a, team){
-  const r=document.createElement('div');r.className='mrow';
-  r.innerHTML=`<div class="av">${(a.name||'?')[0]}</div><div class="nm">${a.name}<div class="tt">${a.title||'Agent'}</div></div><div class="tt">View ›</div>`;
-  r.onclick=()=>showAgent(a, team);
-  return r;
-}
+function secLabel(text,ct){const d=document.createElement('div');d.className='sec';d.innerHTML=text+(ct!=null?` <span class="ct">${ct}</span>`:'');return d;}
 
-async function buildAdminView(agents, team){
-  const c=$('content');c.innerHTML='';
-  const tl=document.createElement('div');tl.className='sec-lbl';tl.innerHTML='Team overview <span class="pill">ALL AGENTS</span>';c.appendChild(tl);
-  renderGauges(c, team, '');
-  const sl=document.createElement('div');sl.className='sec-lbl';sl.textContent='Drill into an agent';c.appendChild(sl);
-  const sw=document.createElement('div');sw.className='selectwrap';
-  const sel=document.createElement('select');
-  sel.innerHTML='<option value="">— select an agent —</option>'+agents.filter(a=>!a.is_admin).map(a=>`<option value="${a.agent_id}">${a.name}</option>`).join('');
-  sw.appendChild(sel);c.appendChild(sw);
-  const slot=document.createElement('div');c.appendChild(slot);
-  sel.onchange=async()=>{slot.innerHTML='';if(!sel.value)return;const a=agents.find(x=>x.agent_id===sel.value);
-    const l=document.createElement('div');l.className='sec-lbl';l.textContent=a.name;slot.appendChild(l);
-    renderGauges(slot, await metricsFor(a.agent_id), '');};
+async function buildOwn(c, me, team){
+  c.appendChild(secLabel('Your metrics'));
+  c.appendChild(gaugeGrid(await metricsFor(me.agent_id)));
+  c.appendChild(secLabel('Team average'));
+  c.appendChild(gaugeGrid(team));
+}
+async function buildMentees(c, me, agents){
+  const mentees=agents.filter(a=>a.agent_id!==me.agent_id && (a.mentor_email||'').toLowerCase()===(me.email||'').toLowerCase());
+  if(!mentees.length)return;
+  c.appendChild(secLabel('Your crew',mentees.length));
+  const list=document.createElement('div');list.className='alist';
+  for(const a of mentees) list.appendChild(agentRow(a, await metricsFor(a.agent_id), true));
+  c.appendChild(list);
+}
+async function buildAdmin(c, agents, team){
+  c.appendChild(secLabel('Team overview', 'all agents'));
+  c.appendChild(gaugeGrid(team));
+  const roster=agents.filter(a=>!a.is_admin).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  c.appendChild(secLabel('Every agent', roster.length));
+  const list=document.createElement('div');list.className='alist';
+  for(const a of roster) list.appendChild(agentRow(a, await metricsFor(a.agent_id), true));
+  c.appendChild(list);
 }
 
 async function boot(session){
   $('login').classList.add('hidden');$('app').classList.remove('hidden');
-  const email=session.user.email;
+  const email=session.user.email, c=$('content');
   const {data:agents,error}=await sb.from('agents').select('*');
-  if(error){$('content').innerHTML='<div class="foot">Could not load metrics: '+error.message+'</div>';return;}
+  if(error){c.innerHTML='<div class="foot">Could not load metrics: '+error.message+'</div>';return;}
   const me=(agents||[]).find(a=>(a.email||'').toLowerCase()===email.toLowerCase());
-  const isAdmin=!!(me&&me.is_admin);
-  $('hNm').textContent=me?me.name:email;
-  $('hRole').textContent=isAdmin?'Admin · Full access':'Agent';
+  const mentees=(agents||[]).filter(a=>me&&a.agent_id!==me.agent_id&&(a.mentor_email||'').toLowerCase()===(me.email||'').toLowerCase());
+  const role = (me&&me.is_admin)?'admin' : (mentees.length?'lead':'agent');
+  $('pAv').textContent=(me?me.name:email).trim()[0].toUpperCase();
+  $('pNm').textContent=me?me.name:email;
+  $('pRole').textContent=role==='admin'?'Admin · All agents':role==='lead'?'Crew Lead':'Agent';
   $('stamp').textContent='Signed in as '+email;
   const team=await teamMetrics();
-  if(isAdmin) await buildAdminView(agents, team);
-  else if(me) await buildAgentView(me, agents, team);
-  else { $('content').innerHTML='<div class="foot">No agent record is linked to '+email+' yet. Ask your admin to add you.</div>';
-         const tl=document.createElement('div');tl.className='sec-lbl';tl.textContent='Team average';$('content').appendChild(tl);renderGauges($('content'),team,''); }
+  c.innerHTML='';
+  if(role==='admin'){ await buildAdmin(c, agents, team); }
+  else if(role==='lead'){ await buildOwn(c, me, team); await buildMentees(c, me, agents); }
+  else if(me){ await buildOwn(c, me, team); }
+  else { c.appendChild(secLabel('Team average')); c.appendChild(gaugeGrid(team));
+         const n=document.createElement('div');n.className='foot';n.textContent='No agent record linked to '+email+' yet — ask your admin to add you.';c.appendChild(n); }
 }
 
-// ── Auth wiring ──
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault();$('loginErr').textContent='';$('loginBtn').textContent='Signing in…';
   const {data,error}=await sb.auth.signInWithPassword({email:$('email').value.trim().toLowerCase(),password:$('pw').value});
@@ -268,9 +259,7 @@ $('loginForm').addEventListener('submit',async e=>{
   if(error){$('loginErr').textContent=error.message;return;}
   boot(data.session);
 });
-$('logoutBtn').addEventListener('click',async()=>{await sb.auth.signOut();location.reload();});
-window.addEventListener('resize',()=>document.querySelectorAll('.gcard canvas').forEach(cv=>{const card=cv.closest('.gcard');}));
-// Resume existing session
+$('signout').addEventListener('click',async()=>{await sb.auth.signOut();location.reload();});
 sb.auth.getSession().then(({data})=>{if(data.session)boot(data.session);});
 </script>
 </body>
