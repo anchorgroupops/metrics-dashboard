@@ -1,0 +1,29 @@
+{
+  "metrics": {
+    "appt": {
+      "value": 0.2759,
+      "boz": null,
+      "elite": null,
+      "mini": true,
+      "target": 0.3,
+      "dir": "higher",
+      "unit": "percent"
+    }
+  },
+  "unavailable": [
+    "pcvr",
+    "csat",
+    "zhl",
+    "pickup",
+    "speed"
+  ],
+  "meta": {
+    "generated_at_utc": "2026-06-18T13:33:48+00:00",
+    "agents": 28,
+    "zillow_leads": 87,
+    "appointments_set": 24,
+    "appointment_rate": 0.2759,
+    "source": "fub_daily_metrics (MTD, Zillow Preferred filtered)",
+    "notes": "Only appointment_rate is published (verified). pickup = person-level proxy (~100% median, unreliable until computed from /v1/calls); speed = no firstCall data; pcvr = Zillow-UI-only; csat/zhl not in FUB."
+  }
+}
