@@ -1,0 +1,766 @@
+"""
+Daily operational activity metrics derived from the FUB /v1/people endpoint.
+
+This is the **daily pulse** counterpart to the monthly Zillow Preferred report.
+Where ``src/fub_client.py`` queries a (mostly nonexistent) aggregate reporting
+endpoint, this module computes metrics directly from per-lead data so we can
+run it hourly or daily without depending on FUB's UI-only Performance Report.
+
+Window
+------
+Each run measures **month-to-date**: leads with ``created >= start of the
+current calendar month``. Today / This Week views are derived by the dashboard
+by diffing snapshots from different days — keeps storage simple and idempotent.
+
+Metric set (the 8 daily metrics + activity points)
+--------------------------------------------------
+Data sources follow FUB Open API guidance (dedicated endpoints preferred):
+
+- ``response_time_seconds``      avg seconds from lead created to first contact     [/people]
+- ``contact_rate``               fraction of leads with contacted=1                 [/people]
+- ``pickup_rate``                fraction of Zillow calls that connected (≥10s)     [/people proxy]
+- ``appointment_rate``           appointments set / total Zillow leads               [/appointments]
+- ``lead_acceptance_rate``       fraction of leads moved past 'New' (stage>26)      [/people]
+- ``call_volume``                outbound call attempts                              [/calls]
+- ``texts_sent``                 outbound texts sent (person aggregate fallback)     [/people]
+- ``emails_sent``                outbound emails sent (person aggregate fallback)    [/people]
+- ``conversations_2min``         outbound calls with duration >= 120s               [/calls]
+- ``appointments_set``           count of appointments created in the period         [/appointments]
+- ``new_leads_not_acted_on``     count of leads with stageId == 26 and contacted=0  [/people]
+- ``total_zillow_leads``         count of filtered Zillow Preferred leads            [/people]
+- ``activity_points``            weighted leaderboard score (see POINTS below)
+
+When /calls or /appointments return 404/403 the module falls back to person-level
+aggregates so daily pulls continue even if those endpoints aren't enabled.
+
+Activity-point weights match the gamification scheme:
+    Appointments Set     × 500
+    Conversations 2+ min × 100
+    Call Attempts        × 10
+    Texts Sent           × 2
+    Emails Sent          × 1
+
+What "Zillow Preferred lead" means
+----------------------------------
+A lead is counted when either source == 'Zillow Preferred' (case-insensitive
+match) or sourceId == 14. Belt-and-suspenders against FUB tenant-specific
+labeling drift.
+
+Response-time approximation
+---------------------------
+FUB's person record exposes ``firstCall`` (timestamp of the first call ever
+placed to this person), plus ``lastSentText`` and ``lastSentEmail`` (the most
+recent outbound text/email). We take the earliest non-null of those three and
+subtract ``created``. That's a conservative proxy — if an agent texted the lead
+multiple times, we measure to the *last* text, biasing the number upward. The
+fully correct path would be ``/v1/events?personId=...`` per lead, but that's
+~N more API calls per agent per run. Acceptable for a daily-pulse view.
+"""
+
+from __future__ import annotations
+
+import base64
+import logging
+import time
+from datetime import UTC, date, datetime
+from typing import Any
+
+import requests
+
+from config.settings import (
+    FUB_API_KEY,
+    FUB_BASE_URL,
+    FUB_MAX_RETRIES,
+    FUB_TIMEOUT_SECONDS,
+    FUB_X_SYSTEM,
+    FUB_X_SYSTEM_KEY,
+)
+
+log = logging.getLogger(__name__)
+
+
+# ── Activity-point weights ────────────────────────────────────────────────────
+
+POINTS = {
+    "appointments_set": 500,
+    "conversations_2min": 100,
+    "call_volume": 10,
+    "texts_sent": 2,
+    "emails_sent": 1,
+}
+
+# Empirically observed FUB stage ids for The Anchor Group:
+#   26 = New
+#   27 = Attempted Contact
+#   28 = Contacted
+#   29 = Appointment Set
+#   30 = Met
+# These ids are tenant-specific. If they change, override via env or update
+# here. The constants keep meaning consistent across this module.
+STAGE_NEW = 26
+APPT_STAGE_IDS = (29, 30)
+CONVERSATION_DURATION_SECONDS = 120
+
+# Zillow Preferred source identification (either match wins). For The Anchor
+# Group's FUB tenant the Zillow lead products surface as "Premier Agent"
+# (Zillow's product name, sourceId 15) and "Zillow" (sourceId 3) — NOT
+# "zillow preferred". Matching is substring + id, so list the real values.
+ZILLOW_SOURCE_ID = 15
+ZILLOW_SOURCE_NAMES = ("premier agent", "zillow")
+
+
+# ── HTTP layer ────────────────────────────────────────────────────────────────
+
+
+def _auth_header() -> dict:
+    """FUB uses HTTP Basic auth with the API key as the username, plus the
+    registered system identity (X-System / X-System-Key) FUB now requires."""
+    token = base64.b64encode(f"{FUB_API_KEY}:".encode()).decode()
+    headers = {"Authorization": f"Basic {token}"}
+    if FUB_X_SYSTEM and FUB_X_SYSTEM_KEY:
+        headers["X-System"] = FUB_X_SYSTEM
+        headers["X-System-Key"] = FUB_X_SYSTEM_KEY
+    return headers
+
+
+def _get(path: str, params: dict | None = None) -> dict:
+    """
+    GET from FUB API with exponential-backoff retries on 5xx/network errors.
+    Honors Retry-After on 429. Raises after FUB_MAX_RETRIES attempts.
+    """
+    url = f"{FUB_BASE_URL}/{path.lstrip('/')}"
+    headers = {**_auth_header(), "Content-Type": "application/json"}
+    delay = 2
+
+    for attempt in range(1, FUB_MAX_RETRIES + 1):
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=FUB_TIMEOUT_SECONDS)
+            if resp.status_code == 429:
+                retry_after = int(resp.headers.get("Retry-After", delay))
+                log.warning("FUB rate-limit; sleeping %ds", retry_after)
+                time.sleep(retry_after)
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        except requests.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status is not None and 400 <= status < 500:
+                log.warning("FUB %d for %s (no retry)", status, url)
+                raise
+            log.warning("FUB request failed (%d/%d): %s", attempt, FUB_MAX_RETRIES, exc)
+            if attempt < FUB_MAX_RETRIES:
+                time.sleep(delay)
+                delay *= 2
+            else:
+                raise
+        except requests.RequestException as exc:
+            log.warning("FUB network error (%d/%d): %s", attempt, FUB_MAX_RETRIES, exc)
+            if attempt < FUB_MAX_RETRIES:
+                time.sleep(delay)
+                delay *= 2
+            else:
+                raise
+
+    raise RuntimeError(f"FUB API unreachable after {FUB_MAX_RETRIES} attempts: {url}")
+
+
+# ── Window / date helpers ─────────────────────────────────────────────────────
+
+
+def month_start(today: date | None = None) -> str:
+    """Return ISO YYYY-MM-DD for the first day of the calendar month of ``today``."""
+    d = today or date.today()
+    return d.replace(day=1).isoformat()
+
+
+def _parse_ts(value: Any) -> datetime | None:
+    """
+    Parse a FUB timestamp. Accepts:
+      - ISO 8601 strings (with or without trailing 'Z')
+      - epoch seconds as int/float (>0)
+      - empty / 0 / None -> None
+    """
+    if value is None or value == "" or value == 0:
+        return None
+    if isinstance(value, (int, float)):
+        if value <= 0:
+            return None
+        return datetime.fromtimestamp(value, tz=UTC)
+    if isinstance(value, str):
+        s = value.strip()
+        if not s:
+            return None
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return None
+
+
+# ── Filtering ─────────────────────────────────────────────────────────────────
+
+
+def is_zillow_preferred(person: dict) -> bool:
+    """True if the person record looks like a Zillow Preferred lead."""
+    raw_id = person.get("sourceId")
+    try:
+        if raw_id is not None and int(raw_id) == ZILLOW_SOURCE_ID:
+            return True
+    except (TypeError, ValueError):
+        pass
+    source = (person.get("sourceName") or person.get("source") or "").strip().lower()
+    if not source:
+        return False
+    if "zillow" in source and ("preferred" in source or "flex" in source or "premier" in source):
+        return True
+    return any(name in source for name in ZILLOW_SOURCE_NAMES)
+
+
+# ── People fetch (paginated) ──────────────────────────────────────────────────
+
+
+def fetch_people_for_agent(assigned_user_id: str, created_after: str) -> list[dict]:
+    """
+    Page through /v1/people for one agent, returning every record created on
+    or after ``created_after`` (ISO YYYY-MM-DD). Uses offset pagination since
+    that's what the people endpoint supports.
+    """
+    if not FUB_API_KEY:
+        raise OSError("FUB_API_KEY is not set; cannot fetch people.")
+
+    collected: list[dict] = []
+    offset = 0
+    limit = 100
+
+    while True:
+        params = {
+            "assignedUserId": assigned_user_id,
+            "createdAfter": created_after,
+            "limit": limit,
+            "offset": offset,
+            "fields": "allFields",
+        }
+        data = _get("/people", params=params)
+        people = data.get("people") or []
+        collected.extend(people)
+
+        meta = data.get("_metadata") or {}
+        total = meta.get("total")
+        if not people or len(people) < limit:
+            break
+        offset += limit
+        # Defensive cap so a buggy total doesn't infinite-loop on us.
+        if total is not None and offset >= total:
+            break
+        if offset >= 5000:
+            log.warning(
+                "Stopping at offset 5000 for user %s — review pagination assumptions",
+                assigned_user_id,
+            )
+            break
+
+    return collected
+
+
+# ── Calls fetch ──────────────────────────────────────────────────────────────
+
+
+def fetch_calls_for_agent(assigned_user_id: str, created_after: str) -> list[dict]:
+    """
+    Fetch outbound calls placed by this agent on or after ``created_after``.
+
+    FUB /calls fields used:
+      userId    — agent who placed the call
+      direction — "outbound" (we filter to outbound only)
+      duration  — call duration in seconds
+      created   — when the call was logged
+    """
+    if not FUB_API_KEY:
+        raise OSError("FUB_API_KEY is not set; cannot fetch calls.")
+
+    collected: list[dict] = []
+    offset = 0
+    limit = 100
+
+    while True:
+        params = {
+            "userId": assigned_user_id,
+            "createdAfter": created_after,
+            "direction": "outbound",
+            "limit": limit,
+            "offset": offset,
+        }
+        try:
+            data = _get("/calls", params=params)
+        except requests.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status in (404, 403):
+                log.warning(
+                    "/calls returned %s for agent %s — falling back to person aggregates",
+                    status,
+                    assigned_user_id,
+                )
+                return []
+            raise
+        except Exception as exc:
+            log.warning(
+                "/calls fetch failed for agent %s (%s) — falling back to person aggregates",
+                assigned_user_id,
+                exc,
+            )
+            return []
+
+        calls = data.get("calls") or []
+        collected.extend(calls)
+
+        meta = data.get("_metadata") or {}
+        total = meta.get("total")
+        if not calls or len(calls) < limit:
+            break
+        offset += limit
+        if total is not None and offset >= total:
+            break
+        if offset >= 10000:
+            log.warning("Stopping at offset 10000 for calls/%s", assigned_user_id)
+            break
+
+    return collected
+
+
+def fetch_appointments_for_agent(assigned_user_id: str, created_after: str) -> list[dict]:
+    """
+    Fetch appointments created for this agent on or after ``created_after``.
+
+    FUB /appointments fields used:
+      userId    — agent who owns the appointment
+      outcome   — result ("Completed", "Met", "No Show", etc.)
+      created   — when the appointment was booked in FUB
+    """
+    if not FUB_API_KEY:
+        raise OSError("FUB_API_KEY is not set; cannot fetch appointments.")
+
+    collected: list[dict] = []
+    offset = 0
+    limit = 100
+
+    while True:
+        params = {
+            "userId": assigned_user_id,
+            "createdAfter": created_after,
+            "limit": limit,
+            "offset": offset,
+        }
+        try:
+            data = _get("/appointments", params=params)
+        except requests.HTTPError as exc:
+            status = exc.response.status_code if exc.response is not None else None
+            if status in (404, 403):
+                log.warning(
+                    "/appointments returned %s for agent %s — falling back to stage data",
+                    status,
+                    assigned_user_id,
+                )
+                return []
+            raise
+        except Exception as exc:
+            log.warning(
+                "/appointments fetch failed for agent %s (%s) — falling back to stage data",
+                assigned_user_id,
+                exc,
+            )
+            return []
+
+        appts = data.get("appointments") or []
+        collected.extend(appts)
+
+        meta = data.get("_metadata") or {}
+        total = meta.get("total")
+        if not appts or len(appts) < limit:
+            break
+        offset += limit
+        if total is not None and offset >= total:
+            break
+        if offset >= 5000:
+            log.warning("Stopping at offset 5000 for appointments/%s", assigned_user_id)
+            break
+
+    return collected
+
+
+# ── Metric calculation ────────────────────────────────────────────────────────
+
+
+def _response_time_seconds(person: dict) -> float | None:
+    """
+    Seconds from lead created to the first *outbound call attempt* (firstCall).
+
+    This is the Zillow "speed to lead" definition — the call-back. We do NOT
+    fall back to lastSentText/lastSentEmail: those are often nurture touches
+    days later and inflate the median into the tens-of-hours range, which is not
+    what the metric measures. Leads never called are excluded (None), not
+    counted as infinitely slow.
+    """
+    created = _parse_ts(person.get("created"))
+    if created is None:
+        return None
+    first_call = _parse_ts(person.get("firstCall"))
+    if first_call is None or first_call < created:
+        return None
+    return max(0.0, (first_call - created).total_seconds())
+
+
+def _last_call_duration(person: dict) -> float:
+    """Total call duration in seconds for this person (cumulative). 0 if absent."""
+    raw = person.get("callsDuration") or person.get("lastCallDuration") or 0
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+# FUB call outcomes that mean the call did NOT connect to a live person.
+_NOT_CONNECTED_OUTCOMES = frozenset({
+    "no answer", "left message", "left voicemail", "voicemail", "no voicemail",
+    "busy", "bad number", "wrong number", "disconnected", "not in service",
+    "no contact", "unknown",
+})
+# When the outcome field is blank (this FUB tenant leaves it empty on ~93% of
+# calls), use call duration as the connect signal: a real answered conversation
+# runs longer than a ring-out or a quick voicemail drop.
+_CONNECTED_MIN_SECONDS = 30.0
+
+
+def _call_connected(call: dict) -> bool:
+    """An outbound call counts as a pickup when its FUB `outcome` indicates the
+    person answered, or — when no outcome is recorded — when the call lasted at
+    least _CONNECTED_MIN_SECONDS (a real conversation vs a ring-out/voicemail)."""
+    outcome = (call.get("outcome") or "").strip().lower()
+    if outcome:
+        return outcome not in _NOT_CONNECTED_OUTCOMES
+    return float(call.get("duration") or 0) >= _CONNECTED_MIN_SECONDS
+
+
+def _picked_up(person: dict) -> bool | None:
+    """
+    Did the first outbound call connect? FUB doesn't expose this directly. We
+    approximate "yes" when firstCall has a timestamp AND callsDuration is at
+    least 10s (i.e. it wasn't a voicemail drop). Returns None when the agent
+    never attempted a call — those leads are not in the pickup denominator.
+    """
+    first_call = _parse_ts(person.get("firstCall"))
+    if first_call is None:
+        return None
+    return _last_call_duration(person) >= 10.0
+
+
+def calculate_agent_metrics(
+    zillow_people: list[dict],
+    calls: list[dict] | None = None,
+    appointments: list[dict] | None = None,
+) -> dict[str, float | int | None]:
+    """
+    Aggregate daily metrics + activity points for one agent.
+
+    zillow_people  → /people filtered to Zillow Preferred leads (required)
+    calls          → /calls outbound records for the period (preferred).
+                     When None, falls back to per-person callsOutgoing aggregates.
+    appointments   → /appointments records for the period (preferred).
+                     When None, falls back to stageId inference from people data.
+
+    Returns a flat dict suitable for save_daily_snapshot.
+    """
+    total = len(zillow_people)
+    if total == 0:
+        return {
+            "response_time_seconds": None,
+            "contact_rate": None,
+            "pickup_rate": None,
+            "appointment_rate": None,
+            "lead_acceptance_rate": None,
+            "call_volume": 0,
+            "texts_sent": 0,
+            "emails_sent": 0,
+            "conversations_2min": 0,
+            "appointments_set": 0,
+            "new_leads_not_acted_on": 0,
+            "total_zillow_leads": 0,
+            "activity_points": 0,
+        }
+
+    # ── Metrics derived from People ───────────────────────────────────────────
+    contacted_count = 0
+    accepted_count = 0
+    texts_sent = 0
+    emails_sent = 0
+    new_not_acted_on = 0
+    # Stage-based appointment count (fallback when /appointments unavailable)
+    appt_from_stage = 0
+
+    for p in zillow_people:
+        if int(p.get("contacted") or 0) == 1:
+            contacted_count += 1
+
+        stage_id = p.get("stageId")
+        if isinstance(stage_id, int):
+            if stage_id in APPT_STAGE_IDS:
+                appt_from_stage += 1
+            if stage_id > STAGE_NEW:
+                accepted_count += 1
+            if stage_id == STAGE_NEW and int(p.get("contacted") or 0) == 0:
+                new_not_acted_on += 1
+
+        texts_sent += int(p.get("textsSent") or 0)
+        emails_sent += int(p.get("emailsSent") or 0)
+
+    # ── Call metrics: dedicated /calls endpoint preferred ────────────────────
+    if calls is not None:
+        call_volume = len(calls)
+        conversations_2min = sum(
+            1
+            for c in calls
+            if float(c.get("duration") or c.get("durationSeconds") or 0)
+            >= CONVERSATION_DURATION_SECONDS
+        )
+    else:
+        # Fallback: person-level aggregates (cumulative since lead creation)
+        call_volume = sum(int(p.get("callsOutgoing") or 0) for p in zillow_people)
+        conversations_2min = sum(
+            1 for p in zillow_people if _last_call_duration(p) >= CONVERSATION_DURATION_SECONDS
+        )
+
+    z_ids = {p.get("id") for p in zillow_people if p.get("id") is not None}
+
+    # ── Pickup rate: outbound calls that CONNECTED / outbound attempts ────────
+    # From /v1/calls `outcome` (the person-level firstCall field is a 0/count
+    # flag, not a timestamp, so it can't drive this). None when no outbound calls.
+    pickup_rate: float | None = None
+    if calls:
+        outbound = [c for c in calls if not c.get("isIncoming")]
+        if outbound:
+            connected = sum(1 for c in outbound if _call_connected(c))
+            pickup_rate = connected / len(outbound)
+
+    # ── Speed to lead: lead created → first OUTBOUND call to that lead ─────────
+    # Matched by personId from /v1/calls; per-lead first call, median upstream.
+    response_times: list[float] = []
+    if calls and z_ids:
+        created_by_id = {p.get("id"): _parse_ts(p.get("created")) for p in zillow_people}
+        first_call: dict = {}
+        for c in calls:
+            if c.get("isIncoming"):
+                continue
+            pid = c.get("personId")
+            if pid not in z_ids:
+                continue
+            ct = _parse_ts(c.get("created"))
+            if ct is None:
+                continue
+            if pid not in first_call or ct < first_call[pid]:
+                first_call[pid] = ct
+        for pid, callt in first_call.items():
+            created = created_by_id.get(pid)
+            if created is not None and callt >= created:
+                response_times.append((callt - created).total_seconds())
+
+    # ── Appointment metrics ──────────────────────────────────────────────────
+    # Count UNIQUE Zillow leads (in this window) that have an appointment, so the
+    # rate is bounded [0, total]. The /appointments endpoint is scoped by date
+    # but returns appts for leads of any age (incl. pre-window), so a raw count
+    # over the new-leads denominator can exceed 100% — match by personId instead,
+    # unioned with stage-based detection for appts the endpoint missed.
+    zillow_ids = {p.get("id") for p in zillow_people if p.get("id") is not None}
+    appt_lead_ids: set = set()
+    for a in appointments or []:
+        pid = a.get("personId") or a.get("personIds")
+        if isinstance(pid, list):
+            appt_lead_ids.update(x for x in pid if x in zillow_ids)
+        elif pid in zillow_ids:
+            appt_lead_ids.add(pid)
+    appt_lead_ids.update(
+        p.get("id")
+        for p in zillow_people
+        if isinstance(p.get("stageId"), int) and p.get("stageId") in APPT_STAGE_IDS
+    )
+    appointment_count = len(appt_lead_ids) if (appointments or appt_from_stage) else appt_from_stage
+
+    activity_points = (
+        appointment_count * POINTS["appointments_set"]
+        + conversations_2min * POINTS["conversations_2min"]
+        + call_volume * POINTS["call_volume"]
+        + texts_sent * POINTS["texts_sent"]
+        + emails_sent * POINTS["emails_sent"]
+    )
+
+    return {
+        "response_time_seconds": (
+            sum(response_times) / len(response_times) if response_times else None
+        ),
+        "contact_rate": contacted_count / total,
+        "pickup_rate": pickup_rate,
+        "appointment_rate": appointment_count / total,
+        "lead_acceptance_rate": accepted_count / total,
+        "call_volume": call_volume,
+        "texts_sent": texts_sent,
+        "emails_sent": emails_sent,
+        "conversations_2min": conversations_2min,
+        "appointments_set": appointment_count,
+        "new_leads_not_acted_on": new_not_acted_on,
+        "total_zillow_leads": total,
+        "activity_points": activity_points,
+    }
+
+
+# ── Top-level run ─────────────────────────────────────────────────────────────
+
+
+def pull_daily_metrics(today: date | None = None) -> list[dict]:
+    """
+    Discover the agent roster (via fub_client.fetch_users, which respects the
+    AGENTS config) and compute MTD metrics for each. Returns a list of:
+
+        {
+            "agent_id": str,
+            "name": str,
+            "email": str,
+            "snapshot_date": "YYYY-MM-DD",
+            "window_start": "YYYY-MM-DD",
+            "metrics": {...},   # see calculate_agent_metrics
+            "_error": Optional[str],
+        }
+
+    Errors on individual agents are caught — the agent's row is included with
+    the error populated and metrics set to None so the dashboard still renders.
+    """
+    from config.settings import AGENTS
+    from src.fub_client import fetch_users
+
+    if not FUB_API_KEY:
+        raise OSError("FUB_API_KEY is not set; set it before running --mode daily.")
+
+    roster = list(AGENTS)
+    if not roster:
+        log.info("AGENTS is empty — auto-discovering from FUB /v1/users.")
+        roster = fetch_users()
+    if not roster:
+        log.warning("No agents to process.")
+        return []
+
+    today = today or date.today()
+    snapshot_date = today.isoformat()
+    window_start = month_start(today)
+
+    results: list[dict] = []
+    for cfg in roster:
+        agent_id = str(cfg["fub_agent_id"])
+        name = cfg["name"]
+        email = cfg["email"]
+        log.info("Daily pull for %s (FUB user %s) MTD from %s", name, agent_id, window_start)
+        try:
+            people = fetch_people_for_agent(agent_id, window_start)
+            zillow_people = [p for p in people if is_zillow_preferred(p)]
+            # Fetch dedicated endpoint data; soft-fail returns [] if unavailable
+            calls = fetch_calls_for_agent(agent_id, window_start)
+            appointments = fetch_appointments_for_agent(agent_id, window_start)
+            metrics = calculate_agent_metrics(
+                zillow_people,
+                calls=calls or None,
+                appointments=appointments or None,
+            )
+            results.append(
+                {
+                    "agent_id": agent_id,
+                    "name": name,
+                    "email": email,
+                    "snapshot_date": snapshot_date,
+                    "window_start": window_start,
+                    "metrics": metrics,
+                }
+            )
+        except Exception as exc:
+            log.exception("Daily pull failed for %s", name)
+            results.append(
+                {
+                    "agent_id": agent_id,
+                    "name": name,
+                    "email": email,
+                    "snapshot_date": snapshot_date,
+                    "window_start": window_start,
+                    "metrics": calculate_agent_metrics([]),
+                    "_error": str(exc),
+                }
+            )
+
+    return results
+
+
+def save_results(results: list[dict]) -> int:
+    """Persist a list of pull_daily_metrics results to SQLite. Returns count saved."""
+    from src import storage
+
+    saved = 0
+    for r in results:
+        storage.save_daily_snapshot(
+            agent_id=r["agent_id"],
+            snapshot_date=r["snapshot_date"],
+            metrics=r["metrics"],
+            name=r["name"],
+            email=r["email"],
+        )
+        saved += 1
+    return saved
+
+
+# ── Mock data for local testing without an API key ────────────────────────────
+
+
+def mock_daily_results(today: date | None = None) -> list[dict]:
+    """Synthetic results that exercise the full snapshot/save path."""
+    today = today or date.today()
+    snapshot_date = today.isoformat()
+    window_start = month_start(today)
+    return [
+        {
+            "agent_id": "mock-001",
+            "name": "Alex Rivera",
+            "email": "alex@example.com",
+            "snapshot_date": snapshot_date,
+            "window_start": window_start,
+            "metrics": {
+                "response_time_seconds": 180.0,
+                "contact_rate": 0.92,
+                "pickup_rate": 0.42,
+                "appointment_rate": 0.28,
+                "lead_acceptance_rate": 0.85,
+                "call_volume": 42,
+                "texts_sent": 88,
+                "emails_sent": 31,
+                "conversations_2min": 14,
+                "appointments_set": 6,
+                "new_leads_not_acted_on": 2,
+                "total_zillow_leads": 21,
+                "activity_points": 6 * 500 + 14 * 100 + 42 * 10 + 88 * 2 + 31 * 1,
+            },
+        },
+        {
+            "agent_id": "mock-002",
+            "name": "Jordan Lee",
+            "email": "jordan@example.com",
+            "snapshot_date": snapshot_date,
+            "window_start": window_start,
+            "metrics": {
+                "response_time_seconds": 540.0,
+                "contact_rate": 0.71,
+                "pickup_rate": 0.22,
+                "appointment_rate": 0.14,
+                "lead_acceptance_rate": 0.62,
+                "call_volume": 19,
+                "texts_sent": 35,
+                "emails_sent": 12,
+                "conversations_2min": 5,
+                "appointments_set": 2,
+                "new_leads_not_acted_on": 4,
+                "total_zillow_leads": 14,
+                "activity_points": 2 * 500 + 5 * 100 + 19 * 10 + 35 * 2 + 12 * 1,
+            },
+        },
+    ]
