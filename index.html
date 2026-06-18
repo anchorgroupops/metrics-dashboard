@@ -522,6 +522,14 @@ function drawZillow(canvas,m){
   // track
   ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,2*Math.PI,false);
   ctx.strokeStyle='#1a1a35';ctx.lineWidth=lw;ctx.lineCap='butt';ctx.stroke();
+  // Not Available: greyed track + "N/A", no needle/value.
+  if(!m||m.unavailable||m.value==null||m.target==null){
+    ctx.beginPath();ctx.arc(cx,cy,r,Math.PI,2*Math.PI,false);
+    ctx.strokeStyle='rgba(100,116,139,.35)';ctx.lineWidth=lw;ctx.setLineDash([2,6]);ctx.lineCap='round';ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#64748b';ctx.font=`800 ${Math.round(r*0.22)}px 'Sora',system-ui,sans-serif`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('N/A',cx,cy-r*0.2);
+    return {cls:'na',label:'NOT AVAILABLE'};
+  }
   const fb=m.boz||(m.dir==='lower'?m.target*0.6:m.target*1.5);
   const fe=m.elite||(m.dir==='lower'?m.target*0.4:m.target*2.5);
   const p=zpFracs(m.target,fb,fe,m.dir);
@@ -561,19 +569,22 @@ function renderZillow(){
   });
 }
 
-// Pull live numbers from the metrics feed (same shape as ZILLOW_METRICS).
-// Until the Monthly-Metrics pipeline publishes accurate pCVR/Pickup/Speed/Appt,
-// no endpoint returns {metrics:{...}}, so this no-ops and the gauges stay
-// SAMPLE. When a feed exists, it flips the badge to LIVE.
+// Live Zillow metrics, published by the Monthly-Metrics pipeline as a static
+// zillow-metrics.json (FUB-derived, MTD, Zillow Preferred filtered). Real values
+// for metrics it can compute; everything in `unavailable` renders "Not
+// Available". Flips the badge SAMPLE → LIVE. Falls back to SAMPLE on any error.
 async function fetchZillow(){
   try{
-    const r=await fetch(INTEL_API+'?type=zillow',{cache:'no-store'});
+    const r=await fetch('zillow-metrics.json?t='+Date.now(),{cache:'no-store'});
     if(!r.ok)return; const d=await r.json();
-    if(d&&d.metrics){
-      Object.assign(ZILLOW_METRICS,d.metrics);
-      renderZillow();
-      const src=document.getElementById('zg-source');
-      if(src){src.textContent='· LIVE';src.style.color='#10b981';}
+    if(!d||(!d.metrics&&!d.unavailable))return;
+    if(d.metrics)Object.assign(ZILLOW_METRICS,d.metrics);
+    (d.unavailable||[]).forEach(k=>{ZILLOW_METRICS[k]={unavailable:true};});
+    renderZillow();
+    const src=document.getElementById('zg-source');
+    if(src){
+      src.textContent='· LIVE';src.style.color='#10b981';
+      if(d.meta&&d.meta.generated_at_utc) src.title='Live FUB data · updated '+d.meta.generated_at_utc;
     }
   }catch(e){/* keep representative values, stay SAMPLE */}
 }
