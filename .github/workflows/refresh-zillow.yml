@@ -1,0 +1,49 @@
+name: Refresh Zillow Metrics
+
+# Always-on (24/7) cloud automation — runs on GitHub's schedule regardless of
+# any PC or the Pi. Observational: pulls FUB, computes team metrics, commits the
+# public zillow-metrics.json. Sends no email/notice/correspondence.
+on:
+  schedule:
+    - cron: '0 */4 * * *'   # every 4 hours
+  workflow_dispatch: {}      # manual "Run workflow" button
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-zillow
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r pipeline/requirements.txt
+      - name: Compute Zillow metrics from FUB
+        env:
+          FUB_API_KEY: ${{ secrets.FUB_API_KEY }}
+          FUB_X_SYSTEM: ${{ secrets.FUB_X_SYSTEM }}
+          FUB_X_SYSTEM_KEY: ${{ secrets.FUB_X_SYSTEM_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          set -o pipefail
+          python pipeline/publish_zillow_metrics.py zillow-metrics.json
+      - name: Commit if changed
+        run: |
+          if [ -n "$(git status --porcelain zillow-metrics.json)" ]; then
+            git config user.name  "anchor-metrics-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add zillow-metrics.json
+            git commit -m "chore: refresh zillow-metrics.json (live FUB) [skip ci]"
+            git push
+            echo "Published refreshed metrics."
+          else
+            echo "No change in Zillow metrics."
+          fi
