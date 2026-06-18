@@ -173,6 +173,15 @@ async function metricsFor(agentId){
   const map={};(data||[]).forEach(r=>map[r.metric_key]={value:r.value,target:r.target});return map;
 }
 async function teamMetrics(){
+  // Team gauges come from the public, daily-refreshed zillow-metrics.json (no
+  // PII), so they stay live without server-side writes. Falls back to the
+  // Supabase team_averages table if the file isn't reachable.
+  try{
+    const r=await fetch('zillow-metrics.json?t='+Date.now(),{cache:'no-store'});
+    if(r.ok){const d=await r.json();const m={};
+      ['pickup','speed','appt'].forEach(k=>{if(d.metrics&&d.metrics[k]) m[k]=d.metrics[k].value;});
+      if(Object.keys(m).length) return m;}
+  }catch(e){}
   const {data}=await sb.from('team_averages').select('metric_key,team_avg').eq('period',PERIOD);
   const map={};(data||[]).forEach(r=>map[r.metric_key]=r.team_avg);return map;
 }
