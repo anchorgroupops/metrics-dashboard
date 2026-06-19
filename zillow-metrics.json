@@ -1,7 +1,7 @@
 {
   "metrics": {
     "pickup": {
-      "value": 0.3901,
+      "value": 0.3877,
       "boz": null,
       "elite": null,
       "mini": true,
@@ -19,7 +19,7 @@
       "unit": "seconds"
     },
     "appt": {
-      "value": 0.2955,
+      "value": 0.3034,
       "boz": null,
       "elite": null,
       "mini": true,
@@ -34,13 +34,13 @@
     "zhl"
   ],
   "meta": {
-    "generated_at_utc": "2026-06-19T12:10:13+00:00",
+    "generated_at_utc": "2026-06-19T18:01:49+00:00",
     "agents": 27,
     "agents_with_pickup": 15,
     "agents_with_speed": 12,
-    "zillow_leads": 88,
-    "appointments_set": 26,
-    "appointment_rate": 0.2955,
+    "zillow_leads": 89,
+    "appointments_set": 27,
+    "appointment_rate": 0.3034,
     "source": "fub_daily_metrics (MTD, Zillow Preferred filtered)",
     "notes": "pickup = /v1/calls outbound connect rate; speed = first outbound call after lead created; appt = unique Zillow leads with an appointment. pcvr = Zillow-UI-only; csat/zhl not in FUB."
   }
