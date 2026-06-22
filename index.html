@@ -793,7 +793,8 @@ function addThinking(lbl){
   const wrap=document.createElement('div');wrap.className='msg dori';wrap.id='dori-thinking';
   const label=document.createElement('div');label.className='msg-label';label.textContent='DORI';
   const dots=document.createElement('div');dots.className='thinking';
-  dots.innerHTML='<div class="dot"></div><div class="dot"></div><div class="dot"></div>'+(lbl?'<span style="font-size:11px;color:var(--mut);margin-left:6px">'+lbl+'</span>':'');
+  for(let i=0;i<3;i++){const d=document.createElement('div');d.className='dot';dots.appendChild(d);}
+  if(lbl){const s=document.createElement('span');s.style.cssText='font-size:11px;color:var(--mut);margin-left:6px';s.textContent=lbl;dots.appendChild(s);}
   wrap.appendChild(label);wrap.appendChild(dots);msgs.appendChild(wrap);msgs.scrollTop=msgs.scrollHeight;
 }
 function removeThinking(){const el=document.getElementById('dori-thinking');if(el)el.remove();}

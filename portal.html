@@ -125,7 +125,7 @@
 const SB_URL='https://zedujsbhqjxzjjmyjhok.supabase.co';
 const SB_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InplZHVqc2JocWp4empqbXlqaG9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MzA4MDQsImV4cCI6MjA5NjUwNjgwNH0.9yc0dim0qUtcy6l-SJxq8pOoeexq5VA2zzmUCpfoR3I';
 const sb=supabase.createClient(SB_URL,SB_ANON,{auth:{persistSession:true,autoRefreshToken:true}});
-const PERIOD='2026-06';
+const PERIOD=(()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');})();
 const METRICS=[
   {key:'appt',  label:'Appointments', target:0.30, dir:'higher', unit:'percent'},
   {key:'pickup',label:'Pickup Rate',  target:0.25, dir:'higher', unit:'percent'},

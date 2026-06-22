@@ -741,6 +741,10 @@ def _null_record(
         "appt_set_rate": None,
         "appt_met_rate": None,
         "speed_to_action": None,
+        "_contacted_count": 0,
+        "_lead_count": 0,
+        "calls_made": 0,
+        "_calls_connected": 0,
         "_error": True,
         "_api_exception": api_exception,
     }
