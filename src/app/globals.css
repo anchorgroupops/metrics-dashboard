@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --clear-water: #046568;
+  --pearl-aqua: #82C8C3;
+  --sandy-shore: #F7ECE1;
+  --black: #000000;
+  --white: #FFFFFF;
+
+  --clear-water-dark: #033B3D;
+  --clear-water-mid: #1A7F82;
+  --pearl-aqua-light: #B8DDD9;
+  --sandy-shore-dark: #D9C8B5;
+  --sandy-shore-mid: #EFE0D0;
+
+  --status-green: #2ECC71;
+  --status-yellow: #F0A500;
+  --status-red: #E05C4B;
+
+  --background: var(--sandy-shore);
+  --foreground: var(--black);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-clear-water: #046568;
+  --color-clear-water-dark: #033B3D;
+  --color-clear-water-mid: #1A7F82;
+  --color-pearl-aqua: #82C8C3;
+  --color-pearl-aqua-light: #B8DDD9;
+  --color-sandy-shore: #F7ECE1;
+  --color-sandy-shore-dark: #D9C8B5;
+  --color-sandy-shore-mid: #EFE0D0;
+
+  --color-status-green: #2ECC71;
+  --color-status-yellow: #F0A500;
+  --color-status-red: #E05C4B;
+
+  --font-heading: 'Collier', Georgia, 'Times New Roman', serif;
+  --font-body: 'Dax Pro', 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+  background: var(--sandy-shore);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
