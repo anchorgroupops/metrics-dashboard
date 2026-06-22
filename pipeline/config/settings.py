@@ -91,12 +91,11 @@ BRAND = {
     # Pearl Aqua   = lighter teal, accent color (10% usage)
     # Sandy Shore  = warm cream, dominant background (60% usage)
     #
-    # NOTE: Exact hex codes estimated from brand deck screenshots.
-    # If you have the source hex values from AgentFire, update these three lines:
-    "color_primary": "#04646B",  # Clear Water — deep teal
-    "color_secondary": "#82C7C3",  # Pearl Aqua — lighter teal/aqua
-    "color_accent": "#F3E1D2",  # Sandy Shore mid-tone (buttons/highlights)
-    "color_bg": "#F7EDE2",  # Sandy Shore light — page/email background
+    # Authoritative hex codes from AgentFire Color & Typography Deck B:
+    "color_primary": "#046568",  # Clear Water — deep teal
+    "color_secondary": "#82C8C3",  # Pearl Aqua — lighter teal/aqua
+    "color_accent": "#F7ECE1",  # Sandy Shore — warm cream (buttons/highlights)
+    "color_bg": "#F7ECE1",  # Sandy Shore — page/email background
     "color_text": "#1A1A1A",  # Near-black body text (high contrast on cream)
     # Gauge status colors — functional traffic-light, harmonized with teal palette
     "color_green": "#2ECC71",  # On-track / Preferred
