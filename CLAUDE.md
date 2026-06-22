@@ -32,7 +32,7 @@ pipeline/                     # Python data pipeline (runs in GitHub Actions + o
 
 - **Frontends:** Vanilla HTML/CSS/JS (no build step). Chart.js for gauges. No framework.
 - **DORI dashboard (index.html):** Password auth (SHA-256 hash check), n8n webhooks for chat/vision/email, canvas gauge engine
-- **Portal (portal.html):** Supabase Auth (email/password), Supabase PostgREST queries for per-agent metrics
+- **Portal (portal.html):** Supabase Auth (email/password), Supabase PostgREST queries for per-agent metrics (tables: `agents`, `agent_metrics`, `team_averages`)
 - **Pipeline:** Python 3.11+, single dependency (`requests`). FUB REST API with Basic auth + X-System headers.
 - **Data flow:** GitHub Actions runs `pipeline/publish_zillow_metrics.py` → commits `zillow-metrics.json` → GitHub Pages serves it → dashboards fetch on load
 - **Optional:** Supabase for per-agent portal data (RLS-protected), Neon Postgres for historical storage
@@ -115,7 +115,9 @@ Lowercase prefix (`chore:`, `fix:`, `feat:`), concise description. Automated com
 ## Things to be careful about
 
 - **Do not wire approximate/proxy data into Zillow gauges.** If a metric can't be computed accurately from FUB, mark it unavailable — don't fake it. See `ZILLOW_DATA_WIRING.md`.
-- **The `storage` module (`from src import storage`) is referenced but does not exist in this repo.** It's imported lazily in fallback paths (`fub_client.py` line 503, `fub_daily_metrics.py` line 699). Those paths will raise `ImportError` if triggered. This is a known gap — the module lives in a separate deployment.
+- **The `storage` module (`from src import storage`) is referenced but does not exist in this repo.** It's imported lazily in fallback paths in `fub_client.py` and `fub_daily_metrics.py`. Those paths will raise `ImportError` if triggered. This is a known gap — the module lives in a separate deployment.
+- **`config/thresholds.json` is referenced in `settings.py` (`THRESHOLDS_FILE`) but does not exist.** Not currently used by any code path in this repo.
 - **FUB stage IDs are tenant-specific.** `STAGE_NEW = 26`, `APPT_STAGE_IDS = (29, 30)` in `fub_daily_metrics.py`. If the FUB tenant changes stages, these constants need updating.
 - **Supabase anon key in portal.html is public-safe** (RLS governs access). The service key is only in GitHub Actions secrets, never in frontend code.
+- **No test suite.** There are no unit or integration tests in this repo. Validate pipeline changes by running `publish_zillow_metrics.py` locally with real or mock FUB credentials.
 - **Brand colors** are documented in `config/settings.py` under `BRAND`. Primary: Clear Water teal `#04646B`, accent: Pearl Aqua `#82C7C3`, background: Sandy Shore `#F7EDE2`.
