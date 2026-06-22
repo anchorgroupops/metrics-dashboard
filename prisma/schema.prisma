@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Agent {
+  id        String   @id @default(cuid())
+  fubId     String?  @unique @map("fub_id")
+  name      String
+  email     String   @unique
+  role      String   @default("agent")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  periods        AgentPeriod[]
+  dailySnapshots DailySnapshot[]
+  drafts         Draft[]
+
+  @@map("agents")
+}
+
+model AgentPeriod {
+  id        String   @id @default(cuid())
+  agentId   String   @map("agent_id")
+  period    String   // YYYY-MM
+  metricKey String   @map("metric_key")
+  value     Float?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, period, metricKey])
+  @@index([period])
+  @@index([agentId, period])
+  @@map("agent_periods")
+}
+
+model DailySnapshot {
+  id           String   @id @default(cuid())
+  agentId      String   @map("agent_id")
+  snapshotDate String   @map("snapshot_date") // YYYY-MM-DD
+  metricKey    String   @map("metric_key")
+  value        Float?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, snapshotDate, metricKey])
+  @@index([snapshotDate])
+  @@index([agentId, snapshotDate])
+  @@map("daily_snapshots")
+}
+
+model Run {
+  id        String    @id @default(cuid())
+  source    String    // "fub", "csv", "json", "fub-daily"
+  period    String?
+  status    String    @default("running") // "running", "completed", "failed"
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+  error     String?
+  meta      Json?
+
+  @@index([status])
+  @@map("runs")
+}
+
+model Draft {
+  id        String    @id @default(cuid())
+  agentId   String    @map("agent_id")
+  period    String
+  subject   String
+  htmlBody  String    @map("html_body") @db.Text
+  status    String    @default("pending") // "pending", "approved", "rejected", "sent"
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  sentAt    DateTime? @map("sent_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, period])
+  @@index([status])
+  @@index([period])
+  @@map("drafts")
+}
