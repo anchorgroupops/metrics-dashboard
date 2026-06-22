@@ -1,7 +1,7 @@
 {
   "metrics": {
     "pickup": {
-      "value": 0.4122,
+      "value": 0.4134,
       "boz": null,
       "elite": null,
       "mini": true,
@@ -34,7 +34,7 @@
     "zhl"
   ],
   "meta": {
-    "generated_at_utc": "2026-06-22T19:33:13+00:00",
+    "generated_at_utc": "2026-06-22T22:06:39+00:00",
     "agents": 27,
     "agents_with_pickup": 16,
     "agents_with_speed": 13,
