@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "refresh": "tsx scripts/nightly-refresh.ts"
+    "refresh": "tsx scripts/nightly-refresh.ts",
+    "research:standards": "tsx scripts/research-standards.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

@@ -1,0 +1,46 @@
+name: Weekly Standards Research
+
+# Re-checks the current Zillow Preferred minimums, milestone targets, and market
+# averages at least weekly (program standards drift). Diffs against the committed
+# config/zillow-standards.json, commits any changes, and posts a Slack summary.
+on:
+  schedule:
+    - cron: '0 13 * * 1' # Mondays 13:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weekly-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Research current standards
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          NOTEBOOKLM_URL: ${{ secrets.NOTEBOOKLM_URL }}
+        run: npm run research:standards
+      - name: Commit any standards changes
+        run: |
+          if [ -n "$(git status --porcelain config/zillow-standards.json config/zillow-standards.research.md)" ]; then
+            git config user.name  "anchor-metrics-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add config/zillow-standards.json config/zillow-standards.research.md
+            git commit -m "chore: refresh Zillow Preferred standards (weekly research) [skip ci]"
+            git push
+            echo "Committed standards changes."
+          else
+            echo "No standards changes to commit."
+          fi
