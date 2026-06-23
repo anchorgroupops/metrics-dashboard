@@ -23,15 +23,26 @@ describe("scoreAgent tiering + flags", () => {
     expect(a.flags.flagged).toBe(false);
   });
 
-  it("assigns BOZ at the 4% pCVR cutoff", () => {
+  it("assigns BOZ at the 6% pCVR cutoff", () => {
     const a = scoreAgent({
       agentId: "x",
       name: "Boz",
       email: "",
       period: "2026-06",
-      metrics: { pcvr: 0.04, pickup_rate: 0.25 },
+      metrics: { pcvr: 0.06, pickup_rate: 0.35 },
     });
     expect(a.tier).toBe("boz");
+  });
+
+  it("treats the 4% qualifying minimum as standard (not BOZ)", () => {
+    const a = scoreAgent({
+      agentId: "x",
+      name: "Min",
+      email: "",
+      period: "2026-06",
+      metrics: { pcvr: 0.04, pickup_rate: 0.25 },
+    });
+    expect(a.tier).toBe("standard");
   });
 
   it("flags an agent below the Zillow thresholds", () => {

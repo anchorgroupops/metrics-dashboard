@@ -3,10 +3,13 @@ import {
   buildTeamSummary,
   buildLeaderboard,
   computeTeamAverages,
+  scoreMetric,
+  metricKeys,
 } from "@/lib/scoring";
+import { THRESHOLDS } from "@/lib/thresholds";
 import { AgentCard } from "@/components/agent-card";
 import { Leaderboard } from "@/components/leaderboard";
-import { PerfGauge } from "@/components/perf-gauge";
+import { MetricGauge } from "@/components/metric-gauge";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getSampleAgents } from "@/lib/sample-data";
@@ -19,14 +22,19 @@ export default function DashboardPage() {
   const leaderboard = buildLeaderboard(agents);
   const teamAverages = computeTeamAverages(scored);
 
-  // Team ZHL pre-approval gauge (value = percentage of target, 0-300%).
-  const zhlPerformers = scored
-    .map((a) => ({ name: a.name, v: a.metrics.zhl_preapproval?.value ?? null }))
-    .filter((p): p is { name: string; v: number } => p.v !== null)
-    .map((p) => ({ name: p.name, value: Math.round(p.v * 100) }));
-  const teamZhl = zhlPerformers.length
-    ? Math.round(zhlPerformers.reduce((s, p) => s + p.value, 0) / zhlPerformers.length)
-    : 0;
+  // Team scorecard: one gauge per official metric, needle = team average,
+  // performer dots = top agents. Sized by weight (hero → compact) in MetricGauge.
+  const scorecard = metricKeys().map((key) => {
+    const th = THRESHOLDS[key];
+    const teamAvg = teamAverages[key] ?? null;
+    const performers = scored.map((a) => ({ name: a.name, value: a.metrics[key]?.value ?? null }));
+    return {
+      key,
+      metric: scoreMetric(key, teamAvg, th), // needle = team average
+      performers,
+      subtitle: `${Math.round(th.weight * 100)}% of the overall Zillow Preferred score`,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -63,22 +71,42 @@ export default function DashboardPage() {
         <SummaryCard label="Top Performer" value={scored[0]?.name || "N/A"} />
       </div>
 
-      {/* Team ZHL pre-approval performance gauge */}
-      {zhlPerformers.length > 0 && (
-        <Card className="flex justify-center overflow-x-auto">
-          <PerfGauge
-            title="TEAM ZHL PRE-APPROVAL PERFORMANCE"
-            subtitle="15% of the overall Zillow Preferred score"
-            axisLabel="ZHL Pre-approvals (percentage of target)"
-            value={teamZhl}
-            teamAverage={teamZhl}
-            minimumThreshold={100}
-            bozThreshold={200}
-            eliteThreshold={280}
-            performers={zhlPerformers}
-          />
-        </Card>
-      )}
+      {/* Team scorecard — one gauge per metric, sized by weight */}
+      <div className="space-y-6">
+        <h2
+          className="text-2xl font-bold text-clear-water"
+          style={{ fontFamily: "'Collier', Georgia, serif" }}
+        >
+          Team Zillow Preferred Scorecard
+        </h2>
+        {/* Hero metric (pCVR) full-width */}
+        {scorecard
+          .filter((s) => s.metric.gaugeSize === "hero")
+          .map((s) => (
+            <Card key={s.key} className="flex justify-center overflow-x-auto">
+              <MetricGauge
+                metric={s.metric}
+                performers={s.performers}
+                teamAverage={teamAverages[s.key] ?? null}
+                subtitle={s.subtitle}
+              />
+            </Card>
+          ))}
+        {/* Secondary + supplementary metrics in a responsive grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {scorecard
+            .filter((s) => s.metric.gaugeSize !== "hero")
+            .map((s) => (
+              <Card key={s.key} className="flex flex-col items-center overflow-x-auto">
+                <MetricGauge
+                  metric={s.metric}
+                  performers={s.performers}
+                  teamAverage={teamAverages[s.key] ?? null}
+                />
+              </Card>
+            ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Leaderboard */}

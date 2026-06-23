@@ -43,6 +43,9 @@ export function scoreMetric(
       unit: threshold.unit,
       direction: threshold.direction,
       gaugeSize: threshold.gaugeSize,
+      bozThreshold: threshold.bozThreshold,
+      eliteThreshold: threshold.eliteThreshold,
+      axisMax: threshold.axisMax,
     };
   }
 
@@ -83,6 +86,9 @@ export function scoreMetric(
     unit: threshold.unit,
     direction: threshold.direction,
     gaugeSize: threshold.gaugeSize,
+    bozThreshold: threshold.bozThreshold,
+    eliteThreshold: threshold.eliteThreshold,
+    axisMax: threshold.axisMax,
   };
 }
 

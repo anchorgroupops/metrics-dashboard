@@ -16,13 +16,13 @@ import {
 describe("percentRankFromAnchors", () => {
   const anchors = POPULATION_ANCHORS.pcvr;
   it("returns anchor percentiles exactly at control points", () => {
-    expect(percentRankFromAnchors(anchors, 0.02)).toBeCloseTo(0.5);
-    expect(percentRankFromAnchors(anchors, 0.04)).toBeCloseTo(0.85);
-    expect(percentRankFromAnchors(anchors, 0.1)).toBeCloseTo(0.99);
+    expect(percentRankFromAnchors(anchors, 0.04)).toBeCloseTo(0.5); // minimum = median
+    expect(percentRankFromAnchors(anchors, 0.06)).toBeCloseTo(0.85); // BOZ
+    expect(percentRankFromAnchors(anchors, 0.1)).toBeCloseTo(0.99); // Elite
   });
   it("interpolates between control points", () => {
-    // halfway between 0.02 (0.5) and 0.04 (0.85) → 0.03 ≈ 0.675
-    expect(percentRankFromAnchors(anchors, 0.03)).toBeCloseTo(0.675, 3);
+    // halfway between 0.04 (0.5) and 0.06 (0.85) → 0.05 ≈ 0.675
+    expect(percentRankFromAnchors(anchors, 0.05)).toBeCloseTo(0.675, 3);
   });
   it("clamps below/above range", () => {
     expect(percentRankFromAnchors(anchors, -1)).toBe(0);
@@ -32,10 +32,14 @@ describe("percentRankFromAnchors", () => {
 
 describe("estimatePopulationPercentRank", () => {
   it("maps Zillow benchmarks to BOZ/ELITE percentiles", () => {
-    expect(estimatePopulationPercentRank("pcvr", 0.04)).toBeCloseTo(BOZ_PERCENTILE);
+    expect(estimatePopulationPercentRank("pcvr", 0.06)).toBeCloseTo(BOZ_PERCENTILE);
     expect(estimatePopulationPercentRank("pcvr", 0.1)).toBeCloseTo(ELITE_PERCENTILE);
-    expect(estimatePopulationPercentRank("pickup_rate", 0.25)).toBeCloseTo(BOZ_PERCENTILE);
+    expect(estimatePopulationPercentRank("pickup_rate", 0.35)).toBeCloseTo(BOZ_PERCENTILE);
     expect(estimatePopulationPercentRank("pickup_rate", 0.6)).toBeCloseTo(ELITE_PERCENTILE);
+  });
+  it("puts the qualifying minimum at the median", () => {
+    expect(estimatePopulationPercentRank("pcvr", 0.04)).toBeCloseTo(0.5);
+    expect(estimatePopulationPercentRank("pickup_rate", 0.25)).toBeCloseTo(0.5);
   });
   it("returns null for unmodeled metrics", () => {
     expect(estimatePopulationPercentRank("speed_to_lead", 100)).toBeNull();
@@ -44,9 +48,9 @@ describe("estimatePopulationPercentRank", () => {
 
 describe("threshold values invert the CDF", () => {
   it("BOZ/ELITE cutoffs match the published thresholds", () => {
-    expect(bozThresholdValue("pcvr")).toBeCloseTo(0.04);
+    expect(bozThresholdValue("pcvr")).toBeCloseTo(0.06);
     expect(eliteThresholdValue("pcvr")).toBeCloseTo(0.1);
-    expect(bozThresholdValue("pickup_rate")).toBeCloseTo(0.25);
+    expect(bozThresholdValue("pickup_rate")).toBeCloseTo(0.35);
     expect(eliteThresholdValue("pickup_rate")).toBeCloseTo(0.6);
   });
   it("round-trips value→percentile→value", () => {

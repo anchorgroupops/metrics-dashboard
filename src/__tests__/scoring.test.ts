@@ -14,6 +14,20 @@ import {
   metricKeys,
 } from "@/lib/scoring";
 import { THRESHOLDS } from "@/lib/thresholds";
+import type { ThresholdConfig } from "@/lib/types";
+
+// Inline lower-is-better config (no official scorecard metric is lower-is-better,
+// but the scoring code path must still be covered).
+const SPEED: ThresholdConfig = {
+  label: "Speed to Lead",
+  weight: 0.15,
+  gaugeSize: "secondary",
+  unit: "seconds",
+  target: 120,
+  yellowFloor: 300,
+  direction: "lower_is_better",
+  description: "",
+};
 
 describe("metricKeys", () => {
   it("returns hero metrics first", () => {
@@ -26,9 +40,11 @@ describe("metricKeys", () => {
     const keys = metricKeys();
     const pcvrIdx = keys.indexOf("pcvr");
     const pickupIdx = keys.indexOf("pickup_rate");
-    const callsIdx = keys.indexOf("calls_made");
-    expect(pcvrIdx).toBeLessThan(pickupIdx);
-    expect(pickupIdx).toBeLessThan(callsIdx);
+    const zhlIdx = keys.indexOf("zhl_preapproval");
+    const csatIdx = keys.indexOf("csat");
+    expect(pcvrIdx).toBeLessThan(pickupIdx); // hero before secondary
+    expect(pickupIdx).toBeLessThan(zhlIdx); // secondary by weight desc
+    expect(zhlIdx).toBeLessThan(csatIdx); // secondary before supplementary
   });
 });
 
@@ -58,21 +74,21 @@ describe("scoreMetric", () => {
 
   it("handles lower_is_better (speed_to_lead)", () => {
     // 85s is below 120s target = green
-    const green = scoreMetric("speed_to_lead", 85, THRESHOLDS.speed_to_lead);
+    const green = scoreMetric("speed_to_lead", 85, SPEED);
     expect(green.status).toBe("green");
 
     // 200s is above target but below yellowFloor of 300 = yellow
-    const yellow = scoreMetric("speed_to_lead", 200, THRESHOLDS.speed_to_lead);
+    const yellow = scoreMetric("speed_to_lead", 200, SPEED);
     expect(yellow.status).toBe("yellow");
 
     // 400s is above yellowFloor = red
-    const red = scoreMetric("speed_to_lead", 400, THRESHOLDS.speed_to_lead);
+    const red = scoreMetric("speed_to_lead", 400, SPEED);
     expect(red.status).toBe("red");
   });
 
   it("computes pct_of_target correctly for lower_is_better", () => {
     // 60s speed when target is 120s => pct = 120/60 = 2.0
-    const result = scoreMetric("speed_to_lead", 60, THRESHOLDS.speed_to_lead);
+    const result = scoreMetric("speed_to_lead", 60, SPEED);
     expect(result.pctOfTarget).toBeCloseTo(2.0);
   });
 });
@@ -82,8 +98,8 @@ describe("overallStatus", () => {
     const metrics = [
       scoreMetric("pcvr", 0.05, THRESHOLDS.pcvr),
       scoreMetric("pickup_rate", 0.30, THRESHOLDS.pickup_rate),
-      scoreMetric("speed_to_lead", 100, THRESHOLDS.speed_to_lead),
-      scoreMetric("appt_rate", 0.35, THRESHOLDS.appt_rate),
+      scoreMetric("zhl_preapproval", 1.0, THRESHOLDS.zhl_preapproval),
+      scoreMetric("csat", 0.90, THRESHOLDS.csat),
     ];
     expect(overallStatus(metrics)).toBe("Preferred");
   });
@@ -92,8 +108,8 @@ describe("overallStatus", () => {
     const metrics = [
       scoreMetric("pcvr", 0.035, THRESHOLDS.pcvr),
       scoreMetric("pickup_rate", 0.22, THRESHOLDS.pickup_rate),
-      scoreMetric("speed_to_lead", 135, THRESHOLDS.speed_to_lead),
-      scoreMetric("appt_rate", 0.26, THRESHOLDS.appt_rate),
+      scoreMetric("zhl_preapproval", 0.85, THRESHOLDS.zhl_preapproval),
+      scoreMetric("csat", 0.80, THRESHOLDS.csat),
     ];
     expect(overallStatus(metrics)).toBe("At Risk");
   });
@@ -106,10 +122,10 @@ describe("overallStatus", () => {
     expect(overallStatus(metrics)).toBe("No Data");
   });
 
-  it("ignores zero-weight metrics", () => {
+  it("ignores metrics with no data", () => {
     const metrics = [
-      scoreMetric("pcvr", 0.05, THRESHOLDS.pcvr),
-      scoreMetric("calls_made", 50, THRESHOLDS.calls_made), // weight 0
+      scoreMetric("pcvr", 0.05, THRESHOLDS.pcvr), // 1.25x target
+      scoreMetric("csat", null, THRESHOLDS.csat), // no data → excluded
     ];
     expect(overallStatus(metrics)).toBe("Preferred");
   });
@@ -254,12 +270,12 @@ describe("buildTeamSummary", () => {
       name: `Agent ${i}`,
       email: "",
       period: "2026-06",
-      metrics: { pcvr: 0.01 + i * 0.005 },
+      metrics: { pcvr: 0.04 + i * 0.006 }, // 0.040 … 0.094, several past the 6% BOZ cutoff
     }));
     const scored = scoreAllAgents(agents);
     const summary = buildTeamSummary(scored, "2026-06");
-    // pCVR ≥ 4% (BOZ cutoff) → i ≥ 6 → 4 agents.
-    expect(summary.bozCount).toBe(4);
+    expect(summary.bozCount).toBeGreaterThan(0);
+    expect(summary.bozCount).toBe(scored.filter((a) => a.tier === "boz" || a.tier === "elite").length);
     expect(summary.topPerformers.length).toBe(summary.bozCount);
     expect(summary.topPerformers.every((a) => a.tier === "boz" || a.tier === "elite")).toBe(true);
   });

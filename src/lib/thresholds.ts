@@ -1,5 +1,18 @@
 import { ThresholdConfig } from "./types";
 
+/**
+ * The official 2026 Zillow Preferred scorecard — four weighted metrics that sum
+ * to 100% (source: "Cracking the Zillow Preferred Code", The Anchor Team):
+ *
+ *   pCVR            50%  — Predicted Conversion Rate, ≥ 4.0% to qualify
+ *   Pickup Rate     25%  — Live-connection pickup, ≥ 25% (goal > 30%)
+ *   ZHL Pre-Approval15%  — 100% of assigned ZHL target, 90-day rolling
+ *   CSAT            10%  — top-15% satisfaction across 24h/15d/45d surveys
+ *
+ * `target` is the Zillow Preferred minimum (the gauge's 100%-of-target line);
+ * `bozThreshold`/`eliteThreshold` are the Best-of-Zillow (top 15%) and Elite
+ * (top 1%) cutoffs, and `axisMax` bounds the gauge. Gauge size follows weight.
+ */
 export const THRESHOLDS: Record<string, ThresholdConfig> = {
   pcvr: {
     label: "Predicted Conversion Rate",
@@ -9,83 +22,65 @@ export const THRESHOLDS: Record<string, ThresholdConfig> = {
     target: 0.04,
     yellowFloor: 0.02,
     direction: "higher_is_better",
-    description: "Zillow leads converted to closed deals over 180-day window",
+    bozThreshold: 0.06,
+    eliteThreshold: 0.1,
+    axisMax: 0.12,
+    description: "Probability-weighted close rate over your last 90 days (≥4% to qualify)",
   },
   pickup_rate: {
-    label: "Pickup Rate",
+    label: "Live Connection Pickup Rate",
     weight: 0.25,
     gaugeSize: "secondary",
     unit: "percent",
     target: 0.25,
     yellowFloor: 0.15,
     direction: "higher_is_better",
-    description: "Outbound calls answered by leads",
-  },
-  speed_to_lead: {
-    label: "Speed to Lead",
-    weight: 0.15,
-    gaugeSize: "secondary",
-    unit: "seconds",
-    target: 120,
-    yellowFloor: 300,
-    direction: "lower_is_better",
-    description: "Median seconds from lead assignment to first contact",
-  },
-  appt_rate: {
-    label: "Appointment Rate",
-    weight: 0.1,
-    gaugeSize: "secondary",
-    unit: "percent",
-    target: 0.30,
-    yellowFloor: 0.15,
-    direction: "higher_is_better",
-    description: "Appointments set per Zillow lead",
-  },
-  csat: {
-    label: "Client Satisfaction",
-    weight: 0,
-    gaugeSize: "supplementary",
-    unit: "percent",
-    target: 0.85,
-    yellowFloor: 0.70,
-    direction: "higher_is_better",
-    description: "Top 15% on Zillow client surveys (Best of Zillow)",
+    bozThreshold: 0.35,
+    eliteThreshold: 0.6,
+    axisMax: 0.7,
+    description: "Live-connection calls answered in the moment (≥25% min, >30% goal)",
   },
   zhl_preapproval: {
     label: "ZHL Pre-Approval",
-    weight: 0,
-    gaugeSize: "supplementary",
+    weight: 0.15,
+    gaugeSize: "secondary",
     unit: "percent",
     target: 1.0,
     yellowFloor: 0.75,
     direction: "higher_is_better",
-    description: "ZHL pre-approval achievement against 100% target",
+    bozThreshold: 2.0,
+    eliteThreshold: 2.8,
+    axisMax: 3.0,
+    description: "Percent of your assigned ZHL pre-approval target over a 90-day rolling window",
   },
-  calls_made: {
-    label: "Calls Made",
-    weight: 0,
+  csat: {
+    label: "Customer Satisfaction (CSAT)",
+    weight: 0.1,
     gaugeSize: "supplementary",
-    unit: "count",
-    target: 400,
-    yellowFloor: 200,
+    unit: "percent",
+    target: 0.85,
+    yellowFloor: 0.7,
     direction: "higher_is_better",
-    description: "Monthly outbound call volume",
+    bozThreshold: 0.9,
+    eliteThreshold: 0.95,
+    axisMax: 1.0,
+    description: "Top-15% satisfaction across the 24-hour, 15-day, and 45-day buyer surveys",
   },
 };
 
-// Zillow Preferred eligibility thresholds (hard numeric checks)
+// Zillow Preferred eligibility thresholds (hard numeric minimums).
 export const ZILPI_ELIGIBILITY = {
-  pcvr: 0.04,      // >= 4% conversion rate
+  pcvr: 0.04, // >= 4% conversion rate
   pickup_rate: 0.25, // >= 25% pickup rate
 };
 
-// Elite (Top 1%) benchmarks
+// Elite (Top 1%) benchmarks.
 export const ELITE_BENCHMARKS = {
-  conversion_rate: 0.10, // >= 10%
-  answer_rate: 0.60,     // >= 60%
+  conversion_rate: 0.1, // >= 10%
+  answer_rate: 0.6, // >= 60%
 };
 
-// Leaderboard point weights
+// Leaderboard point weights (operational activity gamification).
 export const LEADERBOARD_WEIGHTS = {
   appointments_set: 500,
   conversations_2min: 100,

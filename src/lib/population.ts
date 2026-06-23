@@ -26,19 +26,21 @@ export const ELITE_PERCENTILE = 0.99; // top 1%
 export type PopulationAnchors = ReadonlyArray<readonly [number, number]>;
 
 export const POPULATION_ANCHORS: Record<string, PopulationAnchors> = {
+  // Anchored so the Zillow Preferred minimum sits at the median of *qualifying*
+  // agents, with Best-of-Zillow at the 85th and Elite at the 99th percentile.
   pcvr: [
     [0, 0],
-    [0.02, 0.5],
-    [0.04, BOZ_PERCENTILE],
-    [0.1, ELITE_PERCENTILE],
-    [0.2, 1],
+    [0.04, 0.5], // 4% = minimum to qualify
+    [0.06, BOZ_PERCENTILE], // Best of Zillow
+    [0.1, ELITE_PERCENTILE], // Elite (top 1%)
+    [0.12, 1],
   ],
   pickup_rate: [
     [0, 0],
-    [0.18, 0.5],
-    [0.25, BOZ_PERCENTILE],
+    [0.25, 0.5], // 25% = minimum
+    [0.35, BOZ_PERCENTILE],
     [0.6, ELITE_PERCENTILE],
-    [0.85, 1],
+    [0.7, 1],
   ],
   appt_rate: [
     [0, 0],

@@ -18,10 +18,14 @@ export interface ThresholdConfig {
   weight: number;
   gaugeSize: "hero" | "secondary" | "supplementary";
   unit: "percent" | "seconds" | "count";
-  target: number;
+  target: number; // Zillow Preferred minimum (the "100% of target" line)
   yellowFloor: number;
   direction: "higher_is_better" | "lower_is_better";
   description: string;
+  // Gauge bands in natural units (Best of Zillow / Elite cutoffs + axis ceiling).
+  bozThreshold?: number; // Best of Zillow (top 15%)
+  eliteThreshold?: number; // Elite (top 1%)
+  axisMax?: number; // upper bound of the gauge axis
 }
 
 export type MetricStatus = "green" | "yellow" | "red" | "no_data";
@@ -38,6 +42,10 @@ export interface ScoredMetric {
   unit: "percent" | "seconds" | "count";
   direction: "higher_is_better" | "lower_is_better";
   gaugeSize: "hero" | "secondary" | "supplementary";
+  // Gauge bands (natural units) carried through for rendering.
+  bozThreshold?: number;
+  eliteThreshold?: number;
+  axisMax?: number;
 }
 
 export type OverallStatus = "Preferred" | "At Risk" | "Needs Improvement" | "No Data";
