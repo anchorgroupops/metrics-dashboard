@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Header } from "@/components/header";
 import "./globals.css";
 
@@ -10,6 +10,12 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#046568",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,7 +25,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-sandy-shore text-black antialiased">
         <Header />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8">
           {children}
         </main>
         <footer className="bg-clear-water text-pearl-aqua py-6 mt-12">

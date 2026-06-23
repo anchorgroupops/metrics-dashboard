@@ -51,8 +51,13 @@ export async function getViewerContext(): Promise<ViewerContext | null> {
   return { viewer, self, roster };
 }
 
-/** The home route a viewer should land on, by role. */
+/**
+ * Where a viewer lands first. The individual agent metrics are the priority
+ * screen, so anyone with their own performance data (agents AND crew leads)
+ * opens on their own scorecard; pure managers (no producing metrics) open on
+ * the team view.
+ */
 export function defaultRouteFor(ctx: ViewerContext): string {
-  if (ctx.viewer.role === "agent") return `/agent/${ctx.self.id}`;
+  if (ctx.self.scored.overallStatus !== "No Data") return `/agent/${ctx.self.id}`;
   return "/team";
 }

@@ -30,7 +30,7 @@ export function Header() {
             </div>
           </Link>
           <nav
-            className="flex items-center gap-6 text-sm"
+            className="hidden sm:flex items-center gap-6 text-sm"
             style={{ fontFamily: "'Dax Pro', sans-serif" }}
           >
             <Link
