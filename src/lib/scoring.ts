@@ -3,6 +3,14 @@ import {
   MetricStatus, TeamSummary, LeaderboardEntry, ThresholdConfig
 } from "./types";
 import { THRESHOLDS, ZILPI_ELIGIBILITY, LEADERBOARD_WEIGHTS } from "./thresholds";
+import {
+  estimatePopulationPercentRank,
+  classifyTier,
+  zillowThresholdFlags,
+  sqlPercentRank,
+  PRIMARY_TIER_METRIC,
+  type Tier,
+} from "./population";
 
 export function metricKeys(): string[] {
   return Object.entries(THRESHOLDS)
@@ -169,6 +177,14 @@ export function scoreAgent(agentData: AgentMetrics): ScoredAgent {
   const readiness = operationalReadiness(metricsList);
   const points = calculateLeaderboardPoints(agentData.metrics);
   const eligible = checkZilpiEligibility(agentData.metrics);
+  const flags = zillowThresholdFlags(agentData.metrics);
+
+  // BOZ/ELITE tier from PERCENT_RANK of the primary Zillow metric (pCVR) against
+  // the estimated national population. Independent of team size.
+  const primary = agentData.metrics[PRIMARY_TIER_METRIC] ?? null;
+  const populationPercentile =
+    primary !== null ? estimatePopulationPercentRank(PRIMARY_TIER_METRIC, primary) : null;
+  const tier: Tier = classifyTier(populationPercentile);
 
   return {
     agentId: agentData.agentId,
@@ -183,6 +199,9 @@ export function scoreAgent(agentData: AgentMetrics): ScoredAgent {
     leaderboardPoints: points,
     zilpiEligible: eligible,
     percentileRank: null, // set in team context
+    populationPercentile,
+    tier,
+    flags,
   };
 }
 
@@ -215,9 +234,13 @@ export function buildTeamSummary(scored: ScoredAgent[], period: string): TeamSum
     ? readinessValues.reduce((a, b) => a + b, 0) / readinessValues.length
     : 0;
 
-  // Top 15% = Best of Zillow
-  const cutoff = Math.max(1, Math.ceil(scored.length * 0.15));
-  const topPerformers = scored.slice(0, cutoff);
+  // Top performers: BOZ tier or better (dynamic, population-based). Fall back to
+  // the local top 15% slice when no agent reaches the population BOZ cutoff.
+  let topPerformers = scored.filter((a) => a.tier === "boz" || a.tier === "elite");
+  if (topPerformers.length === 0) {
+    const cutoff = Math.max(1, Math.ceil(scored.length * 0.15));
+    topPerformers = scored.slice(0, cutoff);
+  }
 
   return {
     period,
@@ -225,7 +248,51 @@ export function buildTeamSummary(scored: ScoredAgent[], period: string): TeamSum
     topPerformers,
     averageReadiness: avgReadiness,
     zilpiEligibleCount: scored.filter((a) => a.zilpiEligible).length,
+    bozCount: scored.filter((a) => a.tier === "boz" || a.tier === "elite").length,
+    eliteCount: scored.filter((a) => a.tier === "elite").length,
+    flaggedCount: scored.filter((a) => a.flags.flagged).length,
   };
+}
+
+/**
+ * Average of each metric across agents that have a value for it. Used to draw
+ * the team-average marker on every gauge.
+ */
+export function computeTeamAverages(scored: ScoredAgent[]): Record<string, number> {
+  const sums: Record<string, number> = {};
+  const counts: Record<string, number> = {};
+  for (const agent of scored) {
+    for (const m of agent.metricsList) {
+      if (m.value !== null) {
+        sums[m.key] = (sums[m.key] ?? 0) + m.value;
+        counts[m.key] = (counts[m.key] ?? 0) + 1;
+      }
+    }
+  }
+  const avg: Record<string, number> = {};
+  for (const key of Object.keys(sums)) {
+    if (counts[key] > 0) avg[key] = sums[key] / counts[key];
+  }
+  return avg;
+}
+
+/**
+ * SQL PERCENT_RANK() of each agent within the observed team, by a chosen metric
+ * (default operational readiness). Returns a map agentId → percentile [0,1].
+ */
+export function teamPercentRanks(
+  scored: ScoredAgent[],
+  metricFn: (a: ScoredAgent) => number | null = (a) => a.operationalReadiness,
+): Record<string, number> {
+  const values = scored
+    .map(metricFn)
+    .filter((v): v is number => v !== null);
+  const out: Record<string, number> = {};
+  for (const agent of scored) {
+    const v = metricFn(agent);
+    if (v !== null) out[agent.agentId] = sqlPercentRank(values, v);
+  }
+  return out;
 }
 
 export function buildLeaderboard(agents: AgentMetrics[]): LeaderboardEntry[] {

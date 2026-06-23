@@ -42,6 +42,9 @@ export interface ScoredMetric {
 
 export type OverallStatus = "Preferred" | "At Risk" | "Needs Improvement" | "No Data";
 
+import type { Tier, ZillowFlags } from "./population";
+export type { Tier, ZillowFlags } from "./population";
+
 export interface ScoredAgent {
   agentId: string;
   name: string;
@@ -55,6 +58,10 @@ export interface ScoredAgent {
   leaderboardPoints: number;
   zilpiEligible: boolean;
   percentileRank: number | null;
+  // Multi-tier scoring (Phase 2)
+  populationPercentile: number | null; // PERCENT_RANK vs estimated Zillow population
+  tier: Tier; // "elite" | "boz" | "standard" | "unranked"
+  flags: ZillowFlags; // pCVR / pickup-rate threshold flagging
 }
 
 export interface TeamSummary {
@@ -63,6 +70,9 @@ export interface TeamSummary {
   topPerformers: ScoredAgent[];
   averageReadiness: number;
   zilpiEligibleCount: number;
+  bozCount: number; // BOZ or better (top 15%)
+  eliteCount: number; // ELITE (top 1%)
+  flaggedCount: number; // below a Zillow Preferred threshold
 }
 
 export interface LeaderboardEntry {

@@ -1,9 +1,13 @@
-import { scoreAllAgents, buildTeamSummary, buildLeaderboard } from "@/lib/scoring";
+import {
+  scoreAllAgents,
+  buildTeamSummary,
+  buildLeaderboard,
+  computeTeamAverages,
+} from "@/lib/scoring";
 import { AgentCard } from "@/components/agent-card";
 import { Leaderboard } from "@/components/leaderboard";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AgentMetrics } from "@/lib/types";
 import { getSampleAgents } from "@/lib/sample-data";
 
 export default function DashboardPage() {
@@ -12,20 +16,7 @@ export default function DashboardPage() {
   const period = agents[0]?.period || "2026-06";
   const summary = buildTeamSummary(scored, period);
   const leaderboard = buildLeaderboard(agents);
-
-  const teamAverages: Record<string, number> = {};
-  for (const agent of scored) {
-    for (const m of agent.metricsList) {
-      if (m.value !== null) {
-        teamAverages[m.key] = (teamAverages[m.key] || 0) + m.value;
-      }
-    }
-  }
-  const agentCount = scored.length;
-  for (const key of Object.keys(teamAverages)) {
-    const withData = scored.filter((a) => a.metrics[key]?.value !== null).length;
-    if (withData > 0) teamAverages[key] /= withData;
-  }
+  const teamAverages = computeTeamAverages(scored);
 
   return (
     <div className="space-y-8">
@@ -42,8 +33,14 @@ export default function DashboardPage() {
             Zillow Preferred metrics for {formatPeriod(period)}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Badge variant="teal">{summary.zilpiEligibleCount} Zillow Preferred</Badge>
+        <div className="flex gap-2 flex-wrap">
+          {summary.eliteCount > 0 && (
+            <Badge variant="teal">{summary.eliteCount} Elite · Top 1%</Badge>
+          )}
+          <Badge variant="green">{summary.bozCount} BOZ · Top 15%</Badge>
+          {summary.flaggedCount > 0 && (
+            <Badge variant="red">{summary.flaggedCount} Flagged</Badge>
+          )}
           <Badge variant="neutral">{scored.length} Agents</Badge>
         </div>
       </div>
@@ -51,12 +48,9 @@ export default function DashboardPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard label="Team Avg Readiness" value={`${summary.averageReadiness.toFixed(0)}/100`} />
+        <SummaryCard label="BOZ / Elite" value={`${summary.bozCount} / ${summary.eliteCount}`} />
         <SummaryCard label="Zillow Preferred" value={`${summary.zilpiEligibleCount}/${scored.length}`} />
         <SummaryCard label="Top Performer" value={scored[0]?.name || "N/A"} />
-        <SummaryCard
-          label="Period"
-          value={formatPeriod(period)}
-        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

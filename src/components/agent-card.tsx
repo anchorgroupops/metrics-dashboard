@@ -4,11 +4,18 @@ import { ScoredAgent } from "@/lib/types";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Gauge } from "./gauge";
+import { ZhlGauge } from "./zhl-gauge";
 import { formatMetricValue } from "@/lib/scoring";
 
 interface AgentCardProps {
   agent: ScoredAgent;
   teamAverages?: Record<string, number>;
+}
+
+function TierBadge({ tier }: { tier: ScoredAgent["tier"] }) {
+  if (tier === "elite") return <Badge variant="teal">ELITE · Top 1%</Badge>;
+  if (tier === "boz") return <Badge variant="green">BOZ · Top 15%</Badge>;
+  return null;
 }
 
 function statusBadgeVariant(
@@ -27,8 +34,10 @@ export function AgentCard({ agent, teamAverages }: AgentCardProps) {
   const secondaryMetrics = agent.metricsList.filter(
     (m) => m.gaugeSize === "secondary"
   );
+  // ZHL pre-approval renders as its own progress gauge, not a supplementary bar.
+  const zhlMetric = agent.metricsList.find((m) => m.key === "zhl_preapproval");
   const supplementaryMetrics = agent.metricsList.filter(
-    (m) => m.gaugeSize === "supplementary"
+    (m) => m.gaugeSize === "supplementary" && m.key !== "zhl_preapproval"
   );
 
   return (
@@ -47,9 +56,11 @@ export function AgentCard({ agent, teamAverages }: AgentCardProps) {
           <Badge variant={statusBadgeVariant(agent.overallStatus)}>
             {agent.overallStatus}
           </Badge>
+          <TierBadge tier={agent.tier} />
           {agent.zilpiEligible && (
             <Badge variant="teal">Zillow Preferred</Badge>
           )}
+          {agent.flags.flagged && <Badge variant="red">Flagged</Badge>}
         </div>
       </div>
 
@@ -66,7 +77,7 @@ export function AgentCard({ agent, teamAverages }: AgentCardProps) {
       </div>
 
       {/* Secondary gauges */}
-      {secondaryMetrics.length > 0 && (
+      {(secondaryMetrics.length > 0 || (zhlMetric && zhlMetric.value !== null)) && (
         <div className="flex justify-center gap-4 mb-4 flex-wrap">
           {secondaryMetrics.map((m) => (
             <Gauge
@@ -76,6 +87,14 @@ export function AgentCard({ agent, teamAverages }: AgentCardProps) {
               teamAverage={teamAverages?.[m.key]}
             />
           ))}
+          {zhlMetric && zhlMetric.value !== null && (
+            <ZhlGauge
+              value={zhlMetric.value}
+              target={zhlMetric.target}
+              size={140}
+              teamAverage={teamAverages?.zhl_preapproval ?? null}
+            />
+          )}
         </div>
       )}
 
