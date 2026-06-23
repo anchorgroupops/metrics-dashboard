@@ -248,7 +248,7 @@ describe("scoreAllAgents", () => {
 });
 
 describe("buildTeamSummary", () => {
-  it("identifies top 15% performers", () => {
+  it("identifies BOZ+ performers dynamically (population-based)", () => {
     const agents = Array.from({ length: 10 }, (_, i) => ({
       agentId: `a${i}`,
       name: `Agent ${i}`,
@@ -258,7 +258,24 @@ describe("buildTeamSummary", () => {
     }));
     const scored = scoreAllAgents(agents);
     const summary = buildTeamSummary(scored, "2026-06");
-    expect(summary.topPerformers.length).toBe(2); // ceil(10 * 0.15) = 2
+    // pCVR ≥ 4% (BOZ cutoff) → i ≥ 6 → 4 agents.
+    expect(summary.bozCount).toBe(4);
+    expect(summary.topPerformers.length).toBe(summary.bozCount);
+    expect(summary.topPerformers.every((a) => a.tier === "boz" || a.tier === "elite")).toBe(true);
+  });
+
+  it("falls back to the local top 15% when no agent reaches BOZ", () => {
+    const agents = Array.from({ length: 10 }, (_, i) => ({
+      agentId: `a${i}`,
+      name: `Agent ${i}`,
+      email: "",
+      period: "2026-06",
+      metrics: { pcvr: 0.005 + i * 0.001 }, // all below 4%
+    }));
+    const scored = scoreAllAgents(agents);
+    const summary = buildTeamSummary(scored, "2026-06");
+    expect(summary.bozCount).toBe(0);
+    expect(summary.topPerformers.length).toBe(2); // ceil(10 * 0.15)
   });
 });
 
