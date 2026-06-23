@@ -22,7 +22,6 @@
 
 # misc
 .DS_Store
-*.pem
 
 # debug
 npm-debug.log*
@@ -30,10 +29,46 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# ── Secrets — never commit any of these ──────────────────────────────────────
+# Env files (all variants; keep .env.example tracked).
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+
+# Local secret stores / credential dumps
+config/secrets/
+secrets/
+*.secret
+*.secrets
+secrets.*
+
+# Keys & certificates
+*.pem
+*.key
+*.pfx
+*.p12
+*.keystore
+id_rsa
+id_dsa
+*.cer
+*.crt
+
+# Cloud / service-account credentials
+.netrc
+.npmrc
+credentials.json
+service-account*.json
+gcp-*.json
+aws-credentials*
+*.tfvars
+
+# Python env
+pipeline/.venv/
+pipeline/venv/
+.venv/
+venv/
+__pycache__/
+*.pyc
 
 # vercel
 .vercel

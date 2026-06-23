@@ -1,0 +1,16 @@
+# gitleaks configuration — extends the built-in default rules.
+# https://github.com/gitleaks/gitleaks
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-safe placeholders and non-secret values"
+regexes = [
+  # Documentation / template placeholders, not real credentials.
+  '''postgresql://user:password@host''',
+  '''ep-xxx\.us-east-2\.aws\.neon\.tech''',
+]
+paths = [
+  '''\.env\.example$''',
+  '''package-lock\.json$''',
+]
