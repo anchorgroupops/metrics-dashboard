@@ -84,3 +84,55 @@ export interface DailySnapshot {
   metrics: Record<string, number | null>;
   activityPoints: number;
 }
+
+// ── Data-pipeline domain types ────────────────────────────────────────────────
+
+// Activity surface pulled from the Follow Up Boss API for one agent/period.
+export interface FubMetricRecord {
+  agentId: string; // FUB user id (string)
+  period: string; // YYYY-MM
+  calls: number;
+  texts: number;
+  appointments: number;
+  deals: number;
+  nurtureTasks: number;
+  zillowLeads: number;
+}
+
+// Metrics scraped from the Zillow Preferred UI for one agent/period. These are
+// not exposed by the FUB API. Any field may be null when the report omits it.
+export interface ZillowMetricRecord {
+  agentId: string; // matched to FUB user id where possible
+  agentName: string;
+  period: string; // YYYY-MM
+  pcvr: number | null; // Predicted Conversion Rate, decimal 0-1
+  pickupRate: number | null; // decimal 0-1
+  zhlPreapproval: number | null; // decimal 0-1 progress to target
+  csat: number | null; // decimal 0-1
+  connections: number | null;
+  leads: number | null;
+}
+
+// One agent's identity across all source systems — the join key surface the
+// integrity check validates.
+export interface AgentLink {
+  id: string; // internal agent id
+  fubId: string | null; // FUB user id
+  name: string;
+  email: string;
+  teamId: string | null;
+}
+
+export interface IntegrityIssue {
+  severity: "error" | "warning";
+  code: string;
+  agentId?: string;
+  message: string;
+}
+
+export interface IntegrityReport {
+  ok: boolean;
+  checked: number;
+  errors: IntegrityIssue[];
+  warnings: IntegrityIssue[];
+}
