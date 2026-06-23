@@ -1,0 +1,65 @@
+name: Nightly Data Refresh
+
+# Pulls FUB activity + scrapes Zillow metrics, reconciles them into scored
+# performance snapshots in Postgres, runs the cross-system integrity check, and
+# reports the outcome to Slack. Observational: writes data, sends only the Slack
+# summary — no agent-facing email.
+on:
+  schedule:
+    - cron: '0 7 * * *' # 07:00 UTC nightly (~02:00 ET)
+  workflow_dispatch:
+    inputs:
+      period:
+        description: 'Period to refresh (YYYY-MM). Blank = current month.'
+        required: false
+        default: ''
+
+concurrency:
+  group: nightly-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npm run db:generate
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run db:migrate
+      - name: Run nightly refresh
+        id: refresh
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FUB_API_KEY: ${{ secrets.FUB_API_KEY }}
+          FUB_X_SYSTEM: ${{ secrets.FUB_X_SYSTEM }}
+          FUB_X_SYSTEM_KEY: ${{ secrets.FUB_X_SYSTEM_KEY }}
+          ZILLOW_WEB_USER: ${{ secrets.ZILLOW_WEB_USER }}
+          ZILLOW_WEB_PASSWORD: ${{ secrets.ZILLOW_WEB_PASSWORD }}
+          ZILLOW_REPORT_URL: ${{ secrets.ZILLOW_REPORT_URL }}
+          # Fall back to synthetic Zillow rows when web creds aren't configured.
+          ZILLOW_MOCK: ${{ secrets.ZILLOW_WEB_USER == '' && '1' || '' }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REFRESH_PERIOD: ${{ github.event.inputs.period }}
+        run: npm run refresh
+      - name: Notify Slack on job failure
+        # The refresh script posts its own Slack summary on data errors. This is a
+        # belt-and-suspenders alert for hard job failures (install/migrate crash)
+        # so a broken pipeline is never silent.
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -sf -X POST -H 'Content-Type: application/json' \
+              --data "{\"text\":\":rotating_light: Nightly metrics refresh *job failed* (run ${GITHUB_RUN_ID}). See GitHub Actions logs.\"}" \
+              "$SLACK_WEBHOOK_URL" || true
+          fi

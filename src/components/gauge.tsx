@@ -16,7 +16,7 @@ export function Gauge({ metric, size = 200, teamAverage }: GaugeProps) {
   const strokeWidth = 18;
 
   // Determine range for the gauge
-  let min = 0;
+  const min = 0;
   let max: number;
   if (unit === "percent") {
     max = Math.max(target * 1.5, 1);
