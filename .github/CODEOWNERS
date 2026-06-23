@@ -1,0 +1,3 @@
+# Default review owners for the whole repo.
+# Used by branch protection when "require review from Code Owners" is on.
+*       @anchorgroupops
