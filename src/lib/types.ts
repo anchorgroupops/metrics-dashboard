@@ -26,6 +26,10 @@ export interface ThresholdConfig {
   bozThreshold?: number; // Best of Zillow (top 15%)
   eliteThreshold?: number; // Elite (top 1%)
   axisMax?: number; // upper bound of the gauge axis
+  // 2026 milestone goal beyond the minimum (Superior / Elite / Optimized / BoZ).
+  milestone?: number; // natural-unit target to unlock the advantage
+  milestoneLabel?: string; // e.g. "Elite", "Superior"
+  advantage?: string; // short "why it matters" (lead benefit)
 }
 
 export type MetricStatus = "green" | "yellow" | "red" | "no_data";
@@ -46,6 +50,9 @@ export interface ScoredMetric {
   bozThreshold?: number;
   eliteThreshold?: number;
   axisMax?: number;
+  milestone?: number;
+  milestoneLabel?: string;
+  advantage?: string;
 }
 
 export type OverallStatus = "Preferred" | "At Risk" | "Needs Improvement" | "No Data";

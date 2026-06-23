@@ -31,9 +31,13 @@ describe("buildGaugeModel", () => {
     });
     expect(m.value).toBe(150); // 0.06 / 0.04
     expect(m.minimumThreshold).toBe(100);
-    expect(m.bozThreshold).toBe(150); // 0.06 / 0.04
-    expect(m.eliteThreshold).toBe(250); // 0.10 / 0.04
-    expect(m.max).toBe(300); // axisMax 0.12 / 0.04
+    // Axis ceiling tracks the top performer (0.10 → 250%) + margin, not the
+    // fixed elite, so realistic values spread across the dial.
+    expect(m.max).toBe(265); // 250 × 1.06
+    expect(m.milestone).toBe(113); // Elite 0.045 / 0.04 ≈ 112.5
+    expect(m.milestoneLabel).toBe("Elite");
+    expect(m.milestoneValueLabel).toBe("4.5%");
+    expect(m.advantage).toContain("Elite");
     expect(m.valueLabel).toBe("6.0%");
     expect(m.teamAverage).toBe(113); // 0.045 / 0.04 ≈ 112.5 → 113
     expect(m.performers).toEqual([

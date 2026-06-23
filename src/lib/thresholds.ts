@@ -25,6 +25,9 @@ export const THRESHOLDS: Record<string, ThresholdConfig> = {
     bozThreshold: 0.06,
     eliteThreshold: 0.1,
     axisMax: 0.12,
+    milestone: 0.045,
+    milestoneLabel: "Elite",
+    advantage: "Elite (≥4.5%): prioritized for the highest-intent leads & live concierge transfers.",
     description: "Probability-weighted close rate over your last 90 days (≥4% to qualify)",
   },
   pickup_rate: {
@@ -38,6 +41,9 @@ export const THRESHOLDS: Record<string, ThresholdConfig> = {
     bozThreshold: 0.35,
     eliteThreshold: 0.6,
     axisMax: 0.7,
+    milestone: 0.3,
+    milestoneLabel: "Superior",
+    advantage: "Superior (≥30%): unlocks Luxury Lead Priority — high-end concierge transfers.",
     description: "Live-connection calls answered in the moment (≥25% min, >30% goal)",
   },
   zhl_preapproval: {
@@ -51,6 +57,9 @@ export const THRESHOLDS: Record<string, ThresholdConfig> = {
     bozThreshold: 2.0,
     eliteThreshold: 2.8,
     axisMax: 3.0,
+    milestone: 1.0,
+    milestoneLabel: "Optimized",
+    advantage: "Optimized (100%): unlocks Direct ZHL hand-offs — pre-approved buyers 1.9× likelier to close.",
     description: "Percent of your assigned ZHL pre-approval target over a 90-day rolling window",
   },
   csat: {
@@ -64,8 +73,32 @@ export const THRESHOLDS: Record<string, ThresholdConfig> = {
     bozThreshold: 0.9,
     eliteThreshold: 0.95,
     axisMax: 1.0,
+    milestone: 0.9,
+    milestoneLabel: "Best of Zillow",
+    advantage: "Best of Zillow (90+): a branding moat — exclusive 'My Agent' visibility on listings.",
     description: "Top-15% satisfaction across the 24-hour, 15-day, and 45-day buyer surveys",
   },
+};
+
+/**
+ * Operational speed goal — not part of the weighted Zillow Preferred score, but
+ * the single biggest conversion lever. Displayed as its own gauge.
+ */
+export const SPEED_METRIC: ThresholdConfig = {
+  label: "Speed to Lead",
+  weight: 0,
+  gaugeSize: "secondary",
+  unit: "seconds",
+  target: 60, // World-Class: respond in under 60 seconds
+  yellowFloor: 300,
+  direction: "lower_is_better",
+  bozThreshold: 60,
+  eliteThreshold: 30,
+  axisMax: 600,
+  milestone: 60,
+  milestoneLabel: "World-Class",
+  advantage: "Under 60s: +391% conversion. 78% of buyers work with whoever responds first.",
+  description: "Median seconds from lead assignment to first contact (top 1% respond in <60s)",
 };
 
 // Zillow Preferred eligibility thresholds (hard numeric minimums).

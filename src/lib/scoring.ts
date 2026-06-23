@@ -46,6 +46,9 @@ export function scoreMetric(
       bozThreshold: threshold.bozThreshold,
       eliteThreshold: threshold.eliteThreshold,
       axisMax: threshold.axisMax,
+      milestone: threshold.milestone,
+      milestoneLabel: threshold.milestoneLabel,
+      advantage: threshold.advantage,
     };
   }
 
@@ -89,6 +92,9 @@ export function scoreMetric(
     bozThreshold: threshold.bozThreshold,
     eliteThreshold: threshold.eliteThreshold,
     axisMax: threshold.axisMax,
+    milestone: threshold.milestone,
+    milestoneLabel: threshold.milestoneLabel,
+    advantage: threshold.advantage,
   };
 }
 

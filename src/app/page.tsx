@@ -79,31 +79,33 @@ export default function DashboardPage() {
         >
           Team Zillow Preferred Scorecard
         </h2>
-        {/* Hero metric (pCVR) full-width */}
-        {scorecard
-          .filter((s) => s.metric.gaugeSize === "hero")
-          .map((s) => (
-            <Card key={s.key} className="flex justify-center overflow-x-auto">
-              <MetricGauge
-                metric={s.metric}
-                performers={s.performers}
-                teamAverage={teamAverages[s.key] ?? null}
-                subtitle={s.subtitle}
-              />
-            </Card>
-          ))}
+        {/* Hero metric (pCVR) wider */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {scorecard
+            .filter((s) => s.metric.gaugeSize === "hero")
+            .map((s) => (
+              <div key={s.key} className="lg:col-span-2 md:max-w-2xl md:mx-auto w-full">
+                <MetricGauge
+                  metric={s.metric}
+                  performers={s.performers}
+                  teamAverage={teamAverages[s.key] ?? null}
+                  centerCaption="team average"
+                />
+              </div>
+            ))}
+        </div>
         {/* Secondary + supplementary metrics in a responsive grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {scorecard
             .filter((s) => s.metric.gaugeSize !== "hero")
             .map((s) => (
-              <Card key={s.key} className="flex flex-col items-center overflow-x-auto">
-                <MetricGauge
-                  metric={s.metric}
-                  performers={s.performers}
-                  teamAverage={teamAverages[s.key] ?? null}
-                />
-              </Card>
+              <MetricGauge
+                key={s.key}
+                metric={s.metric}
+                performers={s.performers}
+                teamAverage={teamAverages[s.key] ?? null}
+                centerCaption="team average"
+              />
             ))}
         </div>
       </div>

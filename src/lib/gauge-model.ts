@@ -42,6 +42,10 @@ export interface GaugeModel {
   minimumThreshold: number; // always 100 (the target line)
   bozThreshold: number;
   eliteThreshold: number;
+  milestone: number | null; // milestone goal, % of target
+  milestoneLabel: string | null;
+  milestoneValueLabel: string | null; // milestone in natural units (e.g. "4.5%")
+  advantage: string | null;
   teamAverage: number | null;
   performers: GaugePerformer[];
   ticks: number[];
@@ -59,20 +63,11 @@ export function buildGaugeModel({ metric, teamAverage = null, performers = [] }:
   const target = metric.target;
   const boz = metric.bozThreshold ?? target * 1.5;
   const elite = metric.eliteThreshold ?? target * 2;
-  const axisMax = metric.axisMax ?? elite * 1.2;
 
   const bozPct = pctOfTarget(boz, target, dir) ?? 150;
   const elitePct = pctOfTarget(elite, target, dir) ?? 200;
-  // Headroom above elite, and never less than 130% so the bands are legible.
-  const maxPct = Math.max((pctOfTarget(axisMax, target, dir) ?? elitePct * 1.15), elitePct + 15, 130);
-
-  // Place the 100%-of-target line ~⅓ along the arc so the "below minimum" red
-  // band never dominates for bounded metrics (e.g. CSAT, where the achievable
-  // range above target is small). axisMin clamps to 0 for wide-range metrics.
-  const F = 0.33;
-  const rawMin = (100 - F * maxPct) / (1 - F);
-  const axisMin = Math.max(0, Math.floor(rawMin / 5) * 5);
-
+  const milestonePct =
+    metric.milestone != null ? pctOfTarget(metric.milestone, target, dir) : null;
   const value = pctOfTarget(metric.value, target, dir) ?? 0;
 
   const perf: GaugePerformer[] = performers
@@ -80,9 +75,23 @@ export function buildGaugeModel({ metric, teamAverage = null, performers = [] }:
     .filter((p): p is { name: string; pct: number } => p.pct !== null)
     .map((p) => ({ name: p.name, value: Math.round(p.pct) }));
 
-  // Ticks: minimum, BOZ, Elite, and the ceiling (rounded), de-duplicated.
+  // Axis ceiling focuses on the *actionable* range — a margin above the
+  // milestone goal and the best observed performer — rather than the far top-1%
+  // value, so realistic performance spreads across the dial instead of bunching
+  // near the minimum. Floor of 130% keeps the bands legible.
+  const topPct = perf.length ? Math.max(...perf.map((p) => p.value)) : 0;
+  const maxPct = Math.max((milestonePct ?? bozPct) * 1.15, topPct * 1.06, value * 1.06, 130);
+
+  // The "below Zillow Preferred standard" (red) band occupies only the bottom
+  // 10% of the arc — the 100%-of-target line sits at the 10% mark.
+  const F = 0.1;
+  const rawMin = (100 - F * maxPct) / (1 - F);
+  const axisMin = Math.max(0, Math.floor(rawMin / 5) * 5);
+
   const ticks = Array.from(
-    new Set([100, Math.round(bozPct), Math.round(elitePct), Math.round(maxPct)].filter((t) => t <= maxPct)),
+    new Set([100, milestonePct ? Math.round(milestonePct) : null, Math.round(maxPct)].filter(
+      (t): t is number => t !== null && t <= maxPct,
+    )),
   ).sort((a, b) => a - b);
 
   return {
@@ -93,6 +102,10 @@ export function buildGaugeModel({ metric, teamAverage = null, performers = [] }:
     minimumThreshold: 100,
     bozThreshold: Math.round(bozPct),
     eliteThreshold: Math.round(elitePct),
+    milestone: milestonePct === null ? null : Math.round(milestonePct),
+    milestoneLabel: metric.milestoneLabel ?? null,
+    milestoneValueLabel: metric.milestone != null ? formatMetricValue(metric.milestone, metric.unit) : null,
+    advantage: metric.advantage ?? null,
     teamAverage: teamAverage === null ? null : Math.round(pctOfTarget(teamAverage, target, dir) ?? 0),
     performers: perf,
     ticks,
