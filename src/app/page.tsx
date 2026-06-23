@@ -6,6 +6,7 @@ import {
 } from "@/lib/scoring";
 import { AgentCard } from "@/components/agent-card";
 import { Leaderboard } from "@/components/leaderboard";
+import { PerfGauge } from "@/components/perf-gauge";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getSampleAgents } from "@/lib/sample-data";
@@ -17,6 +18,15 @@ export default function DashboardPage() {
   const summary = buildTeamSummary(scored, period);
   const leaderboard = buildLeaderboard(agents);
   const teamAverages = computeTeamAverages(scored);
+
+  // Team ZHL pre-approval gauge (value = percentage of target, 0-300%).
+  const zhlPerformers = scored
+    .map((a) => ({ name: a.name, v: a.metrics.zhl_preapproval?.value ?? null }))
+    .filter((p): p is { name: string; v: number } => p.v !== null)
+    .map((p) => ({ name: p.name, value: Math.round(p.v * 100) }));
+  const teamZhl = zhlPerformers.length
+    ? Math.round(zhlPerformers.reduce((s, p) => s + p.value, 0) / zhlPerformers.length)
+    : 0;
 
   return (
     <div className="space-y-8">
@@ -52,6 +62,23 @@ export default function DashboardPage() {
         <SummaryCard label="Zillow Preferred" value={`${summary.zilpiEligibleCount}/${scored.length}`} />
         <SummaryCard label="Top Performer" value={scored[0]?.name || "N/A"} />
       </div>
+
+      {/* Team ZHL pre-approval performance gauge */}
+      {zhlPerformers.length > 0 && (
+        <Card className="flex justify-center overflow-x-auto">
+          <PerfGauge
+            title="TEAM ZHL PRE-APPROVAL PERFORMANCE"
+            subtitle="15% of the overall Zillow Preferred score"
+            axisLabel="ZHL Pre-approvals (percentage of target)"
+            value={teamZhl}
+            teamAverage={teamZhl}
+            minimumThreshold={100}
+            bozThreshold={200}
+            eliteThreshold={280}
+            performers={zhlPerformers}
+          />
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Leaderboard */}
