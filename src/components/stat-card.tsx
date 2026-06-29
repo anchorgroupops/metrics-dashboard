@@ -3,9 +3,9 @@ import type { RosterAgent } from "@/lib/roster";
 import { formatMetricValue } from "@/lib/scoring";
 
 /**
- * Agent stat card — a basketball-player-card-style summary adapted to agents.
- * Avatar + name + team, a readiness bar (the "headline stat"), a tier/flag
- * badge, and a row of key metrics. The whole card links to the agent's page.
+ * Agent stat card — basketball-player-card-style summary adapted for agents.
+ * Shows the agent's rank, avatar, tier badge, readiness bar, and all 4 official
+ * Zillow Preferred metrics. Tapping the card navigates to the full scorecard.
  */
 
 const TIER_STYLES: Record<string, { label: string; bg: string; fg: string }> = {
@@ -23,16 +23,21 @@ function initials(name: string): string {
     .join("");
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div className="text-center">
-      <div className="text-base font-extrabold text-gray-900 leading-none">{value}</div>
+      <div
+        className="text-base font-extrabold leading-none"
+        style={{ color: highlight ? "#046568" : "#111827" }}
+      >
+        {value}
+      </div>
       <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</div>
     </div>
   );
 }
 
-export function StatCard({ agent }: { agent: RosterAgent }) {
+export function StatCard({ agent, rank }: { agent: RosterAgent; rank?: number }) {
   const s = agent.scored;
   const readiness = s.operationalReadiness;
   const readinessPct = readiness === null ? 0 : Math.min(100, Math.round(readiness));
@@ -43,9 +48,10 @@ export function StatCard({ agent }: { agent: RosterAgent }) {
     return m ? formatMetricValue(m.value, m.unit) : "N/A";
   };
 
-  // Bar color by status.
   const barColor =
     s.overallStatus === "Preferred" ? "#30B14A" : s.overallStatus === "At Risk" ? "#F5A300" : "#E5484D";
+
+  const rankLabel = rank != null ? `#${rank}` : null;
 
   return (
     <Link
@@ -53,29 +59,38 @@ export function StatCard({ agent }: { agent: RosterAgent }) {
       className="group block overflow-hidden rounded-3xl border border-black/5 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 bg-gradient-to-br from-clear-water to-[#0a4f52] p-4 text-white">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-lg font-extrabold">
-          {initials(agent.name)}
+      <div className="bg-gradient-to-br from-clear-water to-[#0a4f52] p-4 text-white">
+        {/* Rank + tier row */}
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[11px] font-extrabold text-white/50 leading-none">
+            {rankLabel ?? ""}
+          </span>
+          <span
+            className="rounded-full px-2.5 py-1 text-[10px] font-extrabold tracking-wide"
+            style={{ background: tier.bg, color: tier.fg }}
+          >
+            {tier.label}
+          </span>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-base font-extrabold leading-tight">{agent.name}</div>
-          <div className="truncate text-xs text-pearl-aqua">
-            {agent.teamName ?? "Unassigned"}
-            {agent.role === "crew_lead" ? " · Crew Lead" : ""}
+        {/* Avatar + name */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-lg font-extrabold">
+            {initials(agent.name)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-base font-extrabold leading-tight">{agent.name}</div>
+            <div className="truncate text-xs text-pearl-aqua">
+              {agent.teamName ?? "Unassigned"}
+              {agent.role === "crew_lead" ? " · Crew Lead" : ""}
+            </div>
           </div>
         </div>
-        <span
-          className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-extrabold tracking-wide"
-          style={{ background: tier.bg, color: tier.fg }}
-        >
-          {tier.label}
-        </span>
       </div>
 
-      {/* Readiness headline */}
+      {/* Readiness bar — the headline stat */}
       <div className="px-4 pt-4">
         <div className="mb-1 flex items-end justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Operational readiness</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Readiness</span>
           <span className="text-lg font-extrabold text-gray-900">
             {readiness === null ? "N/A" : readinessPct}
             <span className="text-xs font-bold text-gray-400">/100</span>
@@ -86,21 +101,27 @@ export function StatCard({ agent }: { agent: RosterAgent }) {
         </div>
         {s.flags.flagged && (
           <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">
-            ⚠ Below a Zillow Preferred minimum
+            ⚠ Below minimum
           </div>
         )}
       </div>
 
-      {/* Stat row */}
+      {/* 4-metric Zillow Preferred stat row */}
       <div className="grid grid-cols-4 gap-1 p-4 pt-3">
-        <Stat label="pCVR" value={metric("pcvr")} />
-        <Stat label="Pickup" value={metric("pickup_rate")} />
-        <Stat label="ZHL" value={metric("zhl_preapproval")} />
-        <Stat label="Points" value={s.leaderboardPoints.toLocaleString()} />
+        <Stat label="pCVR" value={metric("pcvr")} highlight={s.metrics["pcvr"]?.status === "green"} />
+        <Stat label="Pickup" value={metric("pickup_rate")} highlight={s.metrics["pickup_rate"]?.status === "green"} />
+        <Stat label="ZHL" value={metric("zhl_preapproval")} highlight={s.metrics["zhl_preapproval"]?.status === "green"} />
+        <Stat label="CSAT" value={metric("csat")} highlight={s.metrics["csat"]?.status === "green"} />
       </div>
 
-      <div className="px-4 pb-3 text-center text-xs font-semibold text-clear-water opacity-0 transition group-hover:opacity-100">
-        View full scorecard →
+      {/* Activity points footer */}
+      <div className="flex items-center justify-between border-t border-black/5 px-4 pb-3 pt-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          {s.leaderboardPoints.toLocaleString()} pts
+        </span>
+        <span className="text-xs font-semibold text-clear-water opacity-0 transition group-hover:opacity-100">
+          Full scorecard →
+        </span>
       </div>
     </Link>
   );

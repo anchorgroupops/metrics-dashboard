@@ -18,7 +18,9 @@ export default async function TeamPage() {
   const allowed = new Set(
     visibleAgents(viewer, producing.map((a) => ({ id: a.id, teamId: a.teamId }))).map((r) => r.id),
   );
-  const visible = producing.filter((a) => allowed.has(a.id));
+  const visible = producing
+    .filter((a) => allowed.has(a.id))
+    .sort((a, b) => (b.scored.operationalReadiness ?? 0) - (a.scored.operationalReadiness ?? 0));
   const scored = visible.map((a) => a.scored);
 
   const title =
@@ -37,10 +39,10 @@ export default async function TeamPage() {
         </p>
       </div>
 
-      {/* Stat cards */}
+      {/* Stat cards — sorted by operational readiness, rank displayed as jersey number */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {visible.map((a) => (
-          <StatCard key={a.id} agent={a} />
+        {visible.map((a, i) => (
+          <StatCard key={a.id} agent={a} rank={i + 1} />
         ))}
       </div>
 
