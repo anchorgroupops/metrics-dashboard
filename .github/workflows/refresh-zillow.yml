@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: refresh-zillow
@@ -35,15 +36,25 @@ jobs:
         run: |
           set -o pipefail
           python pipeline/publish_zillow_metrics.py zillow-metrics.json
-      - name: Commit if changed
+      - name: Open PR if changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -n "$(git status --porcelain zillow-metrics.json)" ]; then
+            BRANCH="bot/zillow-$(date +%Y%m%d-%H%M)"
             git config user.name  "anchor-metrics-bot"
             git config user.email "actions@users.noreply.github.com"
+            git checkout -b "$BRANCH"
             git add zillow-metrics.json
-            git commit -m "chore: refresh zillow-metrics.json (live FUB) [skip ci]"
-            git push
-            echo "Published refreshed metrics."
+            git commit -m "chore: refresh zillow-metrics.json (live FUB)"
+            git push origin "$BRANCH"
+            PR_URL=$(gh pr create \
+              --title "chore: refresh zillow-metrics.json" \
+              --body "Automated 4-hour refresh from FUB pipeline. Auto-merges once checks pass." \
+              --base main \
+              --head "$BRANCH")
+            gh pr merge "$PR_URL" --auto --merge
+            echo "PR opened and auto-merge enabled: $PR_URL"
           else
             echo "No change in Zillow metrics."
           fi

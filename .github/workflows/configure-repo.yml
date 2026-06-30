@@ -1,0 +1,53 @@
+name: Configure Repo Settings
+
+# One-click setup for the repo-admin settings that an agent/GITHUB_TOKEN cannot
+# change (the default GITHUB_TOKEN has no `administration` scope).
+#
+# Prerequisite: add a repo secret `ADMIN_PAT` = a fine-grained PAT scoped to this
+# repo with "Administration: read and write" (and "Contents: read").
+# Then: Actions tab → "Configure Repo Settings" → Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      enable_branch_protection:
+        description: 'Also protect main (require gitleaks + lint+test). See bot caveat in the logs.'
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge (+ optional branch protection)
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Add a repo secret ADMIN_PAT (fine-grained PAT, Administration: write) and re-run."
+            exit 1
+          fi
+
+          echo "Enabling repo-level auto-merge…"
+          gh api -X PATCH "repos/$REPO" -F allow_auto_merge=true -F delete_branch_on_merge=true >/dev/null
+          echo "✓ auto-merge enabled"
+
+          if [ "${{ inputs.enable_branch_protection }}" = "true" ]; then
+            echo "Enabling branch protection on main (required checks: gitleaks, lint + test)…"
+            echo "NOTE: required status checks can block the refresh-zillow bot's direct [skip ci]"
+            echo "      pushes to main. If that happens, exempt the bot or move it to a PR flow."
+            gh api -X PUT "repos/$REPO/branches/main/protection" --input - <<'JSON'
+          {
+            "required_status_checks": { "strict": true, "checks": [ {"context":"gitleaks"}, {"context":"lint + test"} ] },
+            "enforce_admins": false,
+            "required_pull_request_reviews": null,
+            "restrictions": null
+          }
+          JSON
+            echo "✓ branch protection enabled"
+          else
+            echo "Skipping branch protection (input was false)."
+          fi
