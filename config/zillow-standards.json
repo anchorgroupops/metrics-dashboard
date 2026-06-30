@@ -1,0 +1,57 @@
+{
+  "researched_at": "2026-06-23",
+  "source": "NotebookLM 2026 guidance + Claude web_search (weekly refresh)",
+  "notebooklm_url": "https://notebooklm.google.com/notebook/7d65a212-53d5-4924-ab1d-ebdb575a831a",
+  "metrics": {
+    "pcvr": {
+      "label": "Predicted Conversion Rate",
+      "weight": 0.5,
+      "minimum": 0.04,
+      "milestone": 0.045,
+      "milestone_label": "Elite",
+      "elite": 0.1,
+      "industry_avg": 0.025,
+      "unit": "percent"
+    },
+    "pickup_rate": {
+      "label": "Live Connection Pickup Rate",
+      "weight": 0.25,
+      "minimum": 0.25,
+      "milestone": 0.3,
+      "milestone_label": "Superior",
+      "elite": 0.6,
+      "industry_avg": 0.18,
+      "unit": "percent"
+    },
+    "zhl_preapproval": {
+      "label": "ZHL Pre-Approval",
+      "weight": 0.15,
+      "minimum": 1.0,
+      "milestone": 1.0,
+      "milestone_label": "Optimized",
+      "elite": null,
+      "industry_avg": null,
+      "unit": "ratio"
+    },
+    "csat": {
+      "label": "Customer Satisfaction",
+      "weight": 0.1,
+      "minimum": 0.85,
+      "milestone": 0.9,
+      "milestone_label": "Best of Zillow",
+      "elite": 0.95,
+      "industry_avg": null,
+      "unit": "percent"
+    },
+    "speed_to_lead": {
+      "label": "Speed to Lead",
+      "weight": 0,
+      "minimum": null,
+      "milestone": 60,
+      "milestone_label": "World-Class",
+      "elite": 30,
+      "industry_avg": null,
+      "unit": "seconds"
+    }
+  }
+}

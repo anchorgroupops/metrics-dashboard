@@ -14,14 +14,154 @@ model Agent {
   email     String   @unique
   role      String   @default("agent")
   active    Boolean  @default(true)
+  teamId    String?  @map("team_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  team Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   periods        AgentPeriod[]
   dailySnapshots DailySnapshot[]
   drafts         Draft[]
+  zillowMetrics  ZillowMetric[]
+  fubMetrics     FubMetric[]
+  snapshots      PerformanceSnapshot[]
+  authSessions   AuthSession[]
 
+  @@index([teamId])
   @@map("agents")
+}
+
+// Passwordless login: a single-use token emailed to a FUB address. Works for
+// any email provider (Gmail/Outlook/Yahoo). Token is stored hashed.
+model MagicLink {
+  id        String    @id @default(cuid())
+  email     String
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("magic_links")
+}
+
+// An authenticated browser session, keyed by a hashed cookie token.
+model AuthSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique @map("token_hash")
+  agentId   String   @map("agent_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@map("auth_sessions")
+}
+
+// A team groups agents under a single crew lead.
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  crewLead CrewLead?
+  agents   Agent[]
+
+  @@map("teams")
+}
+
+// The crew lead responsible for a team. Modeled as its own record (not just an
+// Agent role) because a crew lead may sit outside the producing-agent roster
+// and carries team-level accountability. Optionally links to an Agent row when
+// the crew lead also carries their own Zillow book of business.
+model CrewLead {
+  id        String   @id @default(cuid())
+  fubId     String?  @unique @map("fub_id")
+  name      String
+  email     String   @unique
+  teamId    String   @unique @map("team_id")
+  agentId   String?  @unique @map("agent_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("crew_leads")
+}
+
+// Metrics sourced from the Zillow Preferred UI (scraper). These are NOT
+// available from the FUB API: pCVR, pickup rate, and ZHL pre-approval progress
+// are Zillow-UI-only. One row per agent per reporting period.
+model ZillowMetric {
+  id             String   @id @default(cuid())
+  agentId        String   @map("agent_id")
+  period         String // YYYY-MM
+  pcvr           Float? // Predicted Conversion Rate (decimal 0-1)
+  pickupRate     Float?   @map("pickup_rate") // decimal 0-1
+  zhlPreapproval Float?   @map("zhl_preapproval") // decimal 0-1 progress to target
+  csat           Float? // Best of Zillow CSAT (decimal 0-1)
+  connections    Int? // raw connection count from the report
+  leads          Int? // Zillow leads in the window
+  source         String   @default("zillow_scraper")
+  raw            Json? // full scraped row for audit / reprocessing
+  scrapedAt      DateTime @default(now()) @map("scraped_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, period])
+  @@index([period])
+  @@map("zillow_metrics")
+}
+
+// Metrics pulled from the Follow Up Boss API. One row per agent per period.
+// Covers the activity surface FUB does expose: calls, texts, appointments,
+// deals, and nurture tasks.
+model FubMetric {
+  id            String   @id @default(cuid())
+  agentId       String   @map("agent_id")
+  period        String // YYYY-MM
+  calls         Int      @default(0)
+  texts         Int      @default(0)
+  appointments  Int      @default(0)
+  deals         Int      @default(0)
+  nurtureTasks  Int      @default(0) @map("nurture_tasks")
+  zillowLeads   Int      @default(0) @map("zillow_leads")
+  raw           Json? // endpoint response digest for audit
+  pulledAt      DateTime @default(now()) @map("pulled_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, period])
+  @@index([period])
+  @@map("fub_metrics")
+}
+
+// A reconciled point-in-time snapshot joining the FUB and Zillow surfaces into
+// the scored view the dashboard reads. Written by the nightly refresh job.
+model PerformanceSnapshot {
+  id                   String   @id @default(cuid())
+  agentId              String   @map("agent_id")
+  period               String // YYYY-MM
+  snapshotDate         String   @map("snapshot_date") // YYYY-MM-DD
+  operationalReadiness Float?   @map("operational_readiness")
+  overallStatus        String?  @map("overall_status")
+  leaderboardPoints    Int      @default(0) @map("leaderboard_points")
+  zilpiEligible        Boolean  @default(false) @map("zilpi_eligible")
+  fubMetricId          String?  @map("fub_metric_id")
+  zillowMetricId       String?  @map("zillow_metric_id")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, snapshotDate])
+  @@index([period])
+  @@index([snapshotDate])
+  @@map("performance_snapshots")
 }
 
 model AgentPeriod {
